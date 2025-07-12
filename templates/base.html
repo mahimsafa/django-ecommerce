@@ -101,9 +101,26 @@
     </footer>
 
     <!-- Add CSRF token for AJAX requests -->
+    {% csrf_token %}
     <script>
         // Make CSRF token available to JavaScript
         const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+        
+        // Ensure cookies are sent with AJAX requests
+        document.addEventListener('DOMContentLoaded', function() {
+            // This ensures the CSRF token is included in all AJAX requests
+            const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+            if (csrftoken) {
+                // Set as a global variable for easy access
+                window.csrftoken = csrftoken;
+                
+                // Configure axios if you're using it
+                if (typeof axios !== 'undefined') {
+                    axios.defaults.xsrfCookieName = 'csrftoken';
+                    axios.defaults.xsrfHeaderName = 'X-CSRFToken';
+                }
+            }
+        });
     </script>
     
     <!-- Bootstrap JS and dependencies -->

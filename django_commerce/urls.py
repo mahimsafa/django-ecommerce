@@ -19,11 +19,15 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+from store_front.views_auth import register
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('store_front.urls')),
     path('cart/', include('cart.urls', namespace='cart')),
+    # Authentication URLs
+    path('accounts/', include('django.contrib.auth.urls')),
+    path('register/', register, name='register'),  # Custom registration view
 ]
 
 # Serve static and media files in development

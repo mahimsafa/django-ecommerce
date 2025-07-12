@@ -195,15 +195,10 @@
                 <input type="number" id="quantity" value="1" min="1" class="quantity-input" readonly>
                 <button type="button" class="quantity-btn" onclick="updateQuantity(1)">+</button>
                 <button type="button" class="btn btn-primary ms-3 add-to-cart" 
-                        data-variant-id="{{ default_variant.id }}"
-                        {% if not user.is_authenticated %}disabled title="Please login to add to cart"{% endif %}>
+                        data-variant-id="{{ default_variant.id }}">
                     <i class="fas fa-shopping-cart me-2"></i>
                     <span class="button-text">
-                        {% if user.is_authenticated %}
-                            Add to Cart
-                        {% else %}
-                            Login to Buy
-                        {% endif %}
+                        Add to Cart
                     </span>
                     <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                 </button>

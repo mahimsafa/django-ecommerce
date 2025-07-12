@@ -1,5 +1,10 @@
 class CartAPI {
     static getCSRFToken() {
+        // Use the global csrftoken variable if available, otherwise try to get it from cookies
+        if (typeof csrftoken !== 'undefined') {
+            return csrftoken;
+        }
+        
         const cookieValue = document.cookie
             .split('; ')
             .find(row => row.startsWith('csrftoken='))
@@ -16,6 +21,7 @@ class CartAPI {
                     'X-CSRFToken': this.getCSRFToken(),
                     'X-Requested-With': 'XMLHttpRequest'
                 },
+                credentials: 'same-origin',
                 body: JSON.stringify({
                     variant_id: variantId,
                     quantity: quantity
@@ -44,6 +50,7 @@ class CartAPI {
                     'X-CSRFToken': this.getCSRFToken(),
                     'X-Requested-With': 'XMLHttpRequest'
                 },
+                credentials: 'same-origin',
                 body: JSON.stringify({ quantity })
             });
 
@@ -65,9 +72,11 @@ class CartAPI {
             const response = await fetch(`/cart/api/cart/items/${itemId}/`, {
                 method: 'DELETE',
                 headers: {
+                    'Content-Type': 'application/json',
                     'X-CSRFToken': this.getCSRFToken(),
                     'X-Requested-With': 'XMLHttpRequest'
-                }
+                },
+                credentials: 'same-origin'
             });
 
             const data = await response.json();
@@ -88,9 +97,11 @@ class CartAPI {
             const response = await fetch('/cart/api/cart/clear/', {
                 method: 'POST',
                 headers: {
+                    'Content-Type': 'application/json',
                     'X-CSRFToken': this.getCSRFToken(),
                     'X-Requested-With': 'XMLHttpRequest'
-                }
+                },
+                credentials: 'same-origin'
             });
 
             const data = await response.json();
@@ -110,8 +121,11 @@ class CartAPI {
         try {
             const response = await fetch('/cart/api/cart/', {
                 headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.getCSRFToken(),
                     'X-Requested-With': 'XMLHttpRequest'
-                }
+                },
+                credentials: 'same-origin'
             });
 
             const data = await response.json();
@@ -130,12 +144,29 @@ class CartAPI {
     static updateCartUI(data) {
         // Update cart count in navbar
         const cartCountElements = document.querySelectorAll('.cart-count, .cart-count-badge');
+        const itemCount = data.item_count || data.count || 0;
+        
         cartCountElements.forEach(el => {
-            el.textContent = data.item_count || 0;
-            el.style.display = data.item_count > 0 ? 'inline-block' : 'none';
+            el.textContent = itemCount;
+            el.style.display = itemCount > 0 ? 'inline-block' : 'none';
         });
 
-        // You can add more UI updates here as needed
+        // Update any other UI elements as needed
+        const cartItemsContainer = document.querySelector('.cart-items');
+        if (cartItemsContainer && data.items) {
+            // Update cart items if we're on the cart page
+            // This is a simplified example - you might want to implement a more robust update
+            cartItemsContainer.innerHTML = ''; // Clear existing items
+            // Add code to render cart items from data.items
+        }
+
+        // Update total if available
+        if (data.total) {
+            const totalElement = document.querySelector('.cart-total');
+            if (totalElement) {
+                totalElement.textContent = `$${parseFloat(data.total).toFixed(2)}`;
+            }
+        }
     }
 
     static showNotification(message, type = 'success') {
