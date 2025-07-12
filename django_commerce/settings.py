@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'user',
     'store',
     'product',
+    'store_front',
 ]
 
 MIDDLEWARE = [
@@ -79,6 +80,7 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
+            os.path.join(BASE_DIR, 'templates'),  # Project-level templates
             os.path.join(BASE_DIR, 'product', 'templates')
         ],
         'APP_DIRS': True,
