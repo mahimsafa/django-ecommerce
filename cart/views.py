@@ -7,14 +7,14 @@ from django.views.generic import View
 from django.urls import reverse
 from django.db import transaction
 
-from product.models import Variant, Image as ProductImage
+from product.models import Variant
 from store.models import Store
 from .models import Cart, CartItem
 
 @login_required
 @require_POST
 def add_to_cart(request, variant_id):
-    variant = get_object_or_404(Variant, id=variant_id, is_active=True)
+    variant = get_object_or_404(Variant, id=variant_id)
     store = variant.product.store
     quantity = int(request.POST.get('quantity', 1))
     

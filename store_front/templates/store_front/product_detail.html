@@ -191,18 +191,21 @@
             {% endif %}
 
             <div class="quantity-selector">
-                <button class="quantity-btn" onclick="updateQuantity(-1)">-</button>
+                <button type="button" class="quantity-btn" onclick="updateQuantity(-1)">-</button>
                 <input type="number" id="quantity" value="1" min="1" class="quantity-input" readonly>
-                <button class="quantity-btn" onclick="updateQuantity(1)">+</button>
-                <button class="btn btn-primary ms-3 add-to-cart" 
+                <button type="button" class="quantity-btn" onclick="updateQuantity(1)">+</button>
+                <button type="button" class="btn btn-primary ms-3 add-to-cart" 
                         data-variant-id="{{ default_variant.id }}"
                         {% if not user.is_authenticated %}disabled title="Please login to add to cart"{% endif %}>
                     <i class="fas fa-shopping-cart me-2"></i>
-                    {% if user.is_authenticated %}
-                        Add to Cart
-                    {% else %}
-                        Login to Buy
-                    {% endif %}
+                    <span class="button-text">
+                        {% if user.is_authenticated %}
+                            Add to Cart
+                        {% else %}
+                            Login to Buy
+                        {% endif %}
+                    </span>
+                    <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                 </button>
             </div>
 
@@ -340,6 +343,42 @@
         const addToCartBtn = document.querySelector('.add-to-cart');
         const priceElement = document.querySelector('.product-price');
         
+        // Initialize cart functionality
+        if (addToCartBtn) {
+            addToCartBtn.addEventListener('click', async function() {
+                if (this.disabled) return;
+                
+                const variantId = this.getAttribute('data-variant-id');
+                const quantity = parseInt(document.getElementById('quantity').value);
+                const spinner = this.querySelector('.spinner-border');
+                const buttonText = this.querySelector('.button-text');
+                
+                try {
+                    // Show loading state
+                    this.disabled = true;
+                    spinner.classList.remove('d-none');
+                    buttonText.textContent = 'Adding...';
+                    
+                    // Call the API
+                    const response = await CartAPI.addToCart(variantId, quantity);
+                    
+                    // Update UI
+                    CartAPI.updateCartUI(response);
+                    CartAPI.showNotification('Item added to cart');
+                    
+                } catch (error) {
+                    console.error('Error:', error);
+                    CartAPI.showNotification(error.message || 'Failed to add item to cart', 'error');
+                } finally {
+                    // Reset button state
+                    this.disabled = false;
+                    spinner.classList.add('d-none');
+                    buttonText.textContent = 'Add to Cart';
+                }
+            });
+        }
+        
+        // Handle variant selection
         if (variantRadios.length > 0) {
             variantRadios.forEach(radio => {
                 radio.addEventListener('change', function() {
