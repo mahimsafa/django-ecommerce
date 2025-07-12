@@ -25,6 +25,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('store_front.urls')),
     path('cart/', include('cart.urls', namespace='cart')),
+    path('orders/', include('order.urls', namespace='order')),  # Order management
     # Authentication URLs
     path('accounts/', include('django.contrib.auth.urls')),
     path('register/', register, name='register'),  # Custom registration view

@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+
+{% block title %}Order #{{ order.id }} - Django Commerce{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>Order #{{ order.id }}</h1>
+                <a href="{% url 'order:order_history' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Orders
+                </a>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">Order Items</h5>
+                        </div>
+                        <div class="card-body">
+                            {% for item in order.items.all %}
+                            <div class="row mb-3 pb-3 border-bottom">
+                                <div class="col-md-2">
+                                    <img src="{{ item.variant.get_first_image_url }}" 
+                                         alt="{{ item.variant.name }}" 
+                                         class="img-fluid rounded">
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="mb-1">{{ item.variant.product.name }}</h6>
+                                    <p class="text-muted mb-1">
+                                        {{ item.variant.name }}
+                                    </p>
+                                    <p class="text-muted mb-0">Qty: {{ item.quantity }}</p>
+                                </div>
+                                <div class="col-md-4 text-end">
+                                    <p class="mb-1">${{ item.unit_price|floatformat:2 }} each</p>
+                                    <p class="fw-bold">${{ item.get_line_total|floatformat:2 }}</p>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">Order Summary</h5>
+                        </div>
+                        <div class="card-body">
+                            <dl class="row">
+                                <dt class="col-6">Order Status:</dt>
+                                <dd class="col-6 text-end">
+                                    <span class="badge 
+                                        {% if order.status == 'completed' %}bg-success
+                                        {% elif order.status == 'cancelled' %}bg-secondary
+                                        {% else %}bg-primary{% endif %}">
+                                        {{ order.get_status_display }}
+                                    </span>
+                                </dd>
+                                
+                                <dt class="col-6">Order Date:</dt>
+                                <dd class="col-6 text-end">{{ order.placed_at|date:"F j, Y" }}</dd>
+                                
+                                <dt class="col-6">Store:</dt>
+                                <dd class="col-6 text-end">{{ order.store.name }}</dd>
+                                
+                                <dt class="col-6">Subtotal:</dt>
+                                <dd class="col-6 text-end">${{ order.subtotal|floatformat:2 }}</dd>
+                                
+                                {% if order.tax_total > 0 %}
+                                <dt class="col-6">Tax:</dt>
+                                <dd class="col-6 text-end">${{ order.tax_total|floatformat:2 }}</dd>
+                                {% endif %}
+                                
+                                {% if order.discount_total > 0 %}
+                                <dt class="col-6">Discount:</dt>
+                                <dd class="col-6 text-end">-${{ order.discount_total|floatformat:2 }}</dd>
+                                {% endif %}
+                                
+                                <dt class="col-6 fw-bold">Total:</dt>
+                                <dd class="col-6 text-end fw-bold">${{ order.total|floatformat:2 }}</dd>
+                            </dl>
+                            
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-primary" onclick="window.print()">
+                                    <i class="fas fa-print me-2"></i>Print Invoice
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Shipping Information</h5>
+                        </div>
+                        <div class="card-body">
+                            <h6>Shipping Address</h6>
+                            <address class="mb-0">
+                                {{ order.customer.user.get_full_name }}<br>
+                                {{ order.customer.address }}<br>
+                                {% if order.customer.address2 %}
+                                    {{ order.customer.address2 }}<br>
+                                {% endif %}
+                                {{ order.customer.city }}, {{ order.customer.state }} {{ order.customer.zip_code }}<br>
+                                {{ order.customer.country }}<br>
+                                <i class="fas fa-phone"></i> {{ order.customer.phone }}
+                            </address>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
