@@ -1,10 +1,13 @@
-from django.shortcuts import get_object_or_404, redirect
-from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.http import JsonResponse, HttpResponseRedirect
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_http_methods
 from django.contrib import messages
+from django.views.generic import View
+from django.urls import reverse
+from django.db import transaction
 
-from product.models import Variant
+from product.models import Variant, Image as ProductImage
 from store.models import Store
 from .models import Cart, CartItem
 
@@ -53,3 +56,54 @@ def cart_count(request):
     else:
         count = 0
     return JsonResponse({'count': count})
+
+
+class CartView(View):
+    template_name = 'cart/cart.html'
+    
+    def get(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            messages.warning(request, 'Please login to view your cart')
+            return redirect('login')
+            
+        # Get user's active cart with items
+        cart = Cart.objects.filter(
+            user=request.user, 
+            is_active=True
+        ).prefetch_related('items__variant__product__images').first()
+        
+        context = {
+            'cart': cart,
+            'cart_items': cart.items.all() if cart else []
+        }
+        return render(request, self.template_name, context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def update_cart_item(request, item_id):
+    item = get_object_or_404(CartItem, id=item_id, cart__user=request.user)
+    action = request.POST.get('action')
+    
+    with transaction.atomic():
+        if action == 'update':
+            quantity = int(request.POST.get('quantity', 1))
+            if quantity > 0:
+                item.quantity = quantity
+                item.save()
+                messages.success(request, 'Cart updated successfully')
+            else:
+                item.delete()
+                messages.success(request, 'Item removed from cart')
+        elif action == 'remove':
+            item.delete()
+            messages.success(request, 'Item removed from cart')
+    
+    return HttpResponseRedirect(reverse('cart:view'))
+
+
+@login_required
+def clear_cart(request):
+    Cart.objects.filter(user=request.user, is_active=True).delete()
+    messages.success(request, 'Your cart has been cleared')
+    return HttpResponseRedirect(reverse('cart:view'))

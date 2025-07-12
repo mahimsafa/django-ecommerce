@@ -27,9 +27,17 @@
                     <li class="nav-item">
                         <a class="nav-link" href="#">Products</a>
                     </li>
+                    <!-- <li class="nav-item">
+                        <a class="nav-link position-relative" href="{% url 'cart:view' %}">
+                            <i class="fas fa-shopping-cart"></i>
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger cart-count-badge">
+                                0
+                            </span>
+                        </a>
+                    </li> -->
                 </ul>
                 <div class="d-flex">
-                    <a href="#" class="btn btn-outline-light me-2 position-relative">
+                    <a href="{% url 'cart:view' %}" class="btn btn-outline-light me-2 position-relative">
                         <i class="fas fa-shopping-cart"></i> Cart
                         <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger cart-count" style="display: none;">
                             0
