@@ -35,8 +35,8 @@ class Product(models.Model):
         if not self.pk:  # New instance
             return
             
-        if not self.variants.exists():
-            raise ValidationError('A product must have at least one variant.')
+        # if not self.variants.exists():
+        #     raise ValidationError('A product must have at least one variant.')
 
     def __str__(self):
         return self.name
@@ -52,9 +52,8 @@ class Variant(models.Model):
     Product variant. Default variant created after product is saved.
     """
     product = models.ForeignKey(Product, related_name='variants', on_delete=models.CASCADE)
-    name = models.CharField(max_length=255, default='Default')
-    sku = models.CharField(max_length=100, unique=True, default=uuid.uuid4)
-    
+    name = models.CharField(max_length=255)
+    sku = models.CharField(max_length=100, unique=True, blank=True, null=True)
     # Price fields
     default_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     sale_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
@@ -77,7 +76,7 @@ class Image(models.Model):
     """
     product = models.ForeignKey(Product, related_name='images', null=True, blank=True, on_delete=models.CASCADE)
     variant = models.OneToOneField(Variant, related_name='image', null=True, blank=True, on_delete=models.CASCADE)
-    image = models.ImageField(upload_to='product_images/')
+    image = models.ImageField(upload_to='product_images')
     alt_text = models.CharField(max_length=255, blank=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -87,11 +86,11 @@ class Image(models.Model):
         return f"Image for {target}"
 
 
-@receiver(pre_save, sender=Product)
-def ensure_variants_exist(sender, instance, **kwargs):
-    """
-    Ensure a product has at least one variant before saving.
-    This is a safety check in case the admin form bypasses the clean method.
-    """
-    if instance.pk and not instance.variants.exists():
-        raise ValidationError('A product must have at least one variant.')
+# @receiver(pre_save, sender=Product)
+# def ensure_variants_exist(sender, instance, **kwargs):
+#     """
+#     Ensure a product has at least one variant before saving.
+#     This is a safety check in case the admin form bypasses the clean method.
+#     """
+#     if instance.pk and not instance.variants.exists():
+#         raise ValidationError('A product must have at least one variant.')

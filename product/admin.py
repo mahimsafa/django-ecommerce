@@ -35,7 +35,7 @@ class VariantInline(admin.TabularInline):
     form = VariantForm
     extra = 1
     show_change_link = True
-    fields = ('name', 'sku', 'default_price', 'sale_price', 'currency', 'is_on_sale')
+    fields = ('name', 'sku', 'default_price', 'sale_price', 'is_on_sale')
     readonly_fields = ('created_at', 'updated_at')
 
 
