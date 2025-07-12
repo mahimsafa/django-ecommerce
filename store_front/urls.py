@@ -1,7 +1,9 @@
-
 from django.urls import path
-from .views import StoreFrontView
+from . import views
+
+app_name = 'store_front'
 
 urlpatterns = [
-    path('', StoreFrontView.as_view(), name='store_front.home'),
+    path('', views.StoreFrontView.as_view(), name='home'),
+    path('product/<slug:slug>/', views.ProductDetailView.as_view(), name='product_detail'),
 ]

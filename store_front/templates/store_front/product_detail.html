@@ -1,0 +1,359 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<style>
+    .product-gallery {
+        display: flex;
+        flex-direction: column;
+    }
+    .main-image {
+        width: 100%;
+        height: 500px;
+        object-fit: cover;
+        border-radius: 8px;
+        margin-bottom: 15px;
+    }
+    .thumbnail-container {
+        display: flex;
+        gap: 10px;
+        overflow-x: auto;
+        padding-bottom: 10px;
+    }
+    .thumbnail {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+        border-radius: 4px;
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: all 0.3s ease;
+    }
+    .thumbnail:hover, .thumbnail.active {
+        border-color: #0d6efd;
+    }
+    .product-title {
+        font-size: 2rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+    .product-price {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #0d6efd;
+        margin: 1rem 0;
+    }
+    .original-price {
+        text-decoration: line-through;
+        color: #6c757d;
+        font-size: 1.4rem;
+        margin-left: 10px;
+    }
+    .sale-badge {
+        font-size: 0.9rem;
+        padding: 0.25rem 0.5rem;
+        margin-left: 10px;
+    }
+    .variant-selector {
+        margin: 1.5rem 0;
+    }
+    .variant-option {
+        display: inline-block;
+        margin-right: 10px;
+        margin-bottom: 10px;
+    }
+    .variant-option input[type="radio"] {
+        display: none;
+    }
+    .variant-option label {
+        display: block;
+        padding: 8px 15px;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    .variant-option input[type="radio"]:checked + label {
+        border-color: #0d6efd;
+        background-color: #e7f1ff;
+        color: #0d6efd;
+    }
+    .quantity-selector {
+        display: flex;
+        align-items: center;
+        margin: 1.5rem 0;
+    }
+    .quantity-btn {
+        width: 40px;
+        height: 40px;
+        border: 1px solid #dee2e6;
+        background: #f8f9fa;
+        font-size: 1.2rem;
+        cursor: pointer;
+    }
+    .quantity-input {
+        width: 60px;
+        height: 40px;
+        text-align: center;
+        border: 1px solid #dee2e6;
+        border-left: none;
+        border-right: none;
+    }
+    .related-products {
+        margin-top: 4rem;
+    }
+    .related-product-card {
+        transition: transform 0.3s ease;
+    }
+    .related-product-card:hover {
+        transform: translateY(-5px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'store_front:home' %}">Home</a></li>
+            {% if product.category %}
+                <li class="breadcrumb-item"><a href="#">{{ product.category.name }}</a></li>
+            {% endif %}
+            <li class="breadcrumb-item active" aria-current="page">{{ product.name }}</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <!-- Product Images -->
+        <div class="col-lg-6">
+            <div class="product-gallery">
+                <img id="mainImage" src="{{ product.images.first.image.url|default:'/static/images/placeholder-product.png' }}" 
+                     alt="{{ product.name }}" class="main-image">
+                {% if product.images.count > 1 %}
+                <div class="thumbnail-container">
+                    {% for image in product.images.all %}
+                    <img src="{{ image.image.url }}" 
+                         alt="{{ product.name }} - Image {{ forloop.counter }}" 
+                         class="thumbnail {% if forloop.first %}active{% endif %}"
+                         onclick="changeImage('{{ image.image.url }}', this)">
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Product Info -->
+        <div class="col-lg-6">
+            <h1 class="product-title">{{ product.name }}</h1>
+            
+            <div class="product-meta mb-3">
+                {% if product.sku %}
+                <span class="text-muted me-3">SKU: {{ product.sku }}</span>
+                {% endif %}
+                <span class="text-success">
+                    <i class="fas fa-check-circle"></i> In Stock
+                </span>
+            </div>
+
+            <div class="product-price">
+                {% if default_variant.is_on_sale and default_variant.sale_price %}
+                    ${{ default_variant.sale_price }}
+                    <span class="original-price">${{ default_variant.default_price }}</span>
+                    <span class="badge bg-danger sale-badge">Sale</span>
+                {% else %}
+                    ${{ default_variant.default_price }}
+                {% endif %}
+            </div>
+
+            <div class="product-description mt-4">
+                <h5>Description</h5>
+                <p>{{ product.description|linebreaksbr }}</p>
+            </div>
+
+            {% if variants.count > 1 %}
+            <div class="variant-selector">
+                <h6>Options</h6>
+                <div class="d-flex flex-wrap">
+                    {% for variant in variants %}
+                    <div class="variant-option">
+                        <input type="radio" id="variant-{{ variant.id }}" 
+                               name="variant" 
+                               value="{{ variant.id }}" 
+                               data-price="{{ variant.sale_price|default:variant.default_price }}"
+                               {% if forloop.first %}checked{% endif %}>
+                        <label for="variant-{{ variant.id }}">
+                            {{ variant.name }}
+                            {% if variant.sku %}({{ variant.sku }}){% endif %}
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="quantity-selector">
+                <button class="quantity-btn" onclick="updateQuantity(-1)">-</button>
+                <input type="number" id="quantity" value="1" min="1" class="quantity-input" readonly>
+                <button class="quantity-btn" onclick="updateQuantity(1)">+</button>
+                <button class="btn btn-primary ms-3 add-to-cart" 
+                        data-variant-id="{{ default_variant.id }}"
+                        {% if not user.is_authenticated %}disabled title="Please login to add to cart"{% endif %}>
+                    <i class="fas fa-shopping-cart me-2"></i>
+                    {% if user.is_authenticated %}
+                        Add to Cart
+                    {% else %}
+                        Login to Buy
+                    {% endif %}
+                </button>
+            </div>
+
+            <div class="product-meta mt-4 pt-3 border-top">
+                <div class="d-flex align-items-center mb-2">
+                    <span class="text-muted me-2">Category:</span>
+                    <a href="#" class="text-primary">{{ product.category.name|default:"Uncategorized" }}</a>
+                </div>
+                <div class="d-flex align-items-center">
+                    <span class="text-muted me-2">Share:</span>
+                    <div class="social-links">
+                        <a href="#" class="text-muted me-2"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#" class="text-muted me-2"><i class="fab fa-twitter"></i></a>
+                        <a href="#" class="text-muted me-2"><i class="fab fa-pinterest"></i></a>
+                        <a href="#" class="text-muted"><i class="fas fa-envelope"></i></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Tabs -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <ul class="nav nav-tabs" id="productTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="description-tab" data-bs-toggle="tab" 
+                            data-bs-target="#description" type="button" role="tab">
+                        Description
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="specs-tab" data-bs-toggle="tab" 
+                            data-bs-target="#specs" type="button" role="tab">
+                        Specifications
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="reviews-tab" data-bs-toggle="tab" 
+                            data-bs-target="#reviews" type="button" role="tab">
+                        Reviews (0)
+                    </button>
+                </li>
+            </ul>
+            <div class="tab-content p-4 border border-top-0 rounded-bottom" id="productTabsContent">
+                <div class="tab-pane fade show active" id="description" role="tabpanel">
+                    {{ product.description|linebreaks }}
+                </div>
+                <div class="tab-pane fade" id="specs" role="tabpanel">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table">
+                                <tbody>
+                                    <tr>
+                                        <th scope="row" style="width: 30%;">Brand</th>
+                                        <td>{{ product.brand|default:"N/A" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">SKU</th>
+                                        <td>{{ product.sku|default:"N/A" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Availability</th>
+                                        <td><span class="text-success">In Stock</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="tab-pane fade" id="reviews" role="tabpanel">
+                    <p>No reviews yet. Be the first to review this product!</p>
+                    <button class="btn btn-outline-primary">Write a Review</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Related Products -->
+    {% if related_products %}
+    <div class="related-products">
+        <h3 class="mb-4">You May Also Like</h3>
+        <div class="row">
+            {% for related in related_products %}
+            <div class="col-md-3 mb-4">
+                <div class="card h-100 related-product-card">
+                    <img src="{{ related.images.first.image.url|default:'/static/images/placeholder-product.png' }}" 
+                         class="card-img-top" alt="{{ related.name }}">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <a href="{% url 'store_front:product_detail' slug=related.slug %}" class="text-decoration-none">
+                                {{ related.name }}
+                            </a>
+                        </h5>
+                        <p class="card-text text-primary fw-bold">
+                            ${{ related.variants.first.sale_price|default:related.variants.first.default_price }}
+                            {% if related.variants.first.is_on_sale %}
+                            <small class="text-muted text-decoration-line-through ms-2">
+                                ${{ related.variants.first.default_price }}
+                            </small>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Change main product image when thumbnail is clicked
+    function changeImage(src, element) {
+        document.getElementById('mainImage').src = src;
+        document.querySelectorAll('.thumbnail').forEach(thumb => {
+            thumb.classList.remove('active');
+        });
+        element.classList.add('active');
+    }
+
+    // Update quantity
+    function updateQuantity(change) {
+        const input = document.getElementById('quantity');
+        let value = parseInt(input.value) + change;
+        if (value < 1) value = 1;
+        input.value = value;
+    }
+
+    // Update price when variant changes
+    document.addEventListener('DOMContentLoaded', function() {
+        const variantRadios = document.querySelectorAll('input[name="variant"]');
+        const addToCartBtn = document.querySelector('.add-to-cart');
+        const priceElement = document.querySelector('.product-price');
+        
+        if (variantRadios.length > 0) {
+            variantRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    const price = this.getAttribute('data-price');
+                    const variantId = this.value;
+                    
+                    // Update price display
+                    priceElement.textContent = '$' + parseFloat(price).toFixed(2);
+                    
+                    // Update add to cart button with new variant
+                    addToCartBtn.setAttribute('data-variant-id', variantId);
+                });
+            });
+        }
+    });
+</script>
+{% endblock %}

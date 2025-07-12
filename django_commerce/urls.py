@@ -23,6 +23,7 @@ from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('store_front.urls')),
+    path('cart/', include('cart.urls', namespace='cart')),
 ]
 
 # Serve static and media files in development

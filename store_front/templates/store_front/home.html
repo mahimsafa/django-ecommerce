@@ -8,13 +8,18 @@
         {% for product in products %}
         <div class="col">
             <div class="card h-100 product-card">
-                {% comment %} Add product image here when you have an image field {% endcomment %}
-                <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
-                    <span class="text-muted">Product Image</span>
-                </div>
-                <div class="card-body">
-                    <h5 class="card-title">{{ product.name }}</h5>
-                    <p class="card-text text-muted small">{{ product.description|truncatewords:20 }}</p>
+                <a href="{% url 'store_front:product_detail' slug=product.slug %}" class="text-decoration-none text-dark">
+                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+                        {% if product.images.first %}
+                            <img src="{{ product.images.first.image.url }}" alt="{{ product.name }}" class="img-fluid" style="max-height: 100%; max-width: 100%; object-fit: contain;">
+                        {% else %}
+                            <span class="text-muted">No Image Available</span>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title">{{ product.name }}</h5>
+                        <p class="card-text text-muted small">{{ product.description|truncatewords:20 }}</p>
+                    </a>
                     
                     {% with variant=product.variants.first %}
                     {% if variant %}
@@ -27,7 +32,16 @@
                                 <span class="fw-bold">৳{{ variant.default_price }}</span>
                             {% endif %}
                         </div>
-                        <a href="#" class="btn btn-sm btn-outline-primary">Add to Cart</a>
+                        <button 
+                            class="btn btn-sm btn-outline-primary add-to-cart"
+                            data-variant-id="{{ variant.id }}"
+                            {% if not user.is_authenticated %}disabled title="Please login to add to cart"{% endif %}>
+                            {% if user.is_authenticated %}
+                                Add to Cart
+                            {% else %}
+                                Login to Buy
+                            {% endif %}
+                        </button>
                     </div>
                     {% endif %}
                     {% endwith %}

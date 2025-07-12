@@ -1,7 +1,7 @@
-from django.shortcuts import render
-from django.views.generic import ListView, TemplateView
-from product.models import Product, Variant
-from django.db.models import Prefetch
+from django.shortcuts import render, get_object_or_404
+from django.views.generic import ListView, DetailView, TemplateView
+from django.db.models import Prefetch, Q
+from product.models import Product, Variant, Category
 
 # Create your views here.
 
@@ -27,4 +27,44 @@ class StoreFrontView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         # Add any additional context data here
+        return context
+
+
+class ProductDetailView(DetailView):
+    model = Product
+    template_name = 'store_front/product_detail.html'
+    context_object_name = 'product'
+    slug_url_kwarg = 'slug'
+    
+    def get_queryset(self):
+        return Product.objects.filter(
+            status='published'
+        ).prefetch_related(
+            'variants',
+            'images'
+        )
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        product = self.object
+        
+        # Get all variants for the product
+        variants = product.variants.all()
+        
+        # Get related products (products from the same category)
+        related_products = Product.objects.filter(
+            category=product.category,
+            status='published'
+        ).exclude(id=product.id).prefetch_related('variants')[:4]
+        
+        # Get default variant (first variant)
+        default_variant = variants.first()
+        
+        context.update({
+            'variants': variants,
+            'default_variant': default_variant,
+            'related_products': related_products,
+            'in_wishlist': False,  # You can implement wishlist functionality later
+        })
+        
         return context
