@@ -53,6 +53,7 @@ INSTALLED_APPS = [
 
     # Third-party apps
     'rest_framework',
+    'mptt',
 
     # Local apps
     'user',

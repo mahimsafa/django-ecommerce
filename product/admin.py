@@ -1,8 +1,27 @@
 from django.contrib import admin
-from .models import Product, Variant, Image
+from .models import Product, Variant, Image, Category
 from django.utils.html import format_html
 from django import forms
+from mptt.admin import MPTTModelAdmin, DraggableMPTTAdmin
 
+
+@admin.register(Category)
+class CategoryAdmin(DraggableMPTTAdmin):
+    mptt_level_indent = 20
+    list_display = ('tree_actions', 'indented_title', 'product_count', 'is_active')
+    list_display_links = ('indented_title',)
+    list_filter = ('is_active',)
+    search_fields = ('name', 'description')
+    prepopulated_fields = {'slug': ('name',)}
+    readonly_fields = ('created_at', 'updated_at')
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.prefetch_related('products')
+    
+    def product_count(self, instance):
+        return instance.products.count()
+    product_count.short_description = 'Products'
 
 class VariantForm(forms.ModelForm):
     class Meta:
@@ -41,13 +60,13 @@ class VariantInline(admin.TabularInline):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('name', 'store', 'created_at', 'updated_at', 'variant_count')
-    list_filter = ('store', 'created_at', 'updated_at')
+    list_display = ('name', 'store', 'category', 'created_at', 'updated_at', 'variant_count')
+    list_filter = ('store', 'category', 'created_at', 'updated_at')
     search_fields = ('name', 'description', 'slug')
     prepopulated_fields = {'slug': ('name',)}
     inlines = [VariantInline, ImageInline]
     date_hierarchy = 'created_at'
-    list_select_related = ('store',)
+    list_select_related = ('store', 'category')
     readonly_fields = ('created_at', 'updated_at')
     
     def variant_count(self, obj):
