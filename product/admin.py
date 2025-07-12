@@ -3,6 +3,9 @@ from .models import Product, Variant, Image, Category
 from django.utils.html import format_html
 from django import forms
 from mptt.admin import MPTTModelAdmin, DraggableMPTTAdmin
+from django.contrib.admin import ModelAdmin, register
+from django.contrib import admin
+from django.utils.safestring import mark_safe
 
 
 @admin.register(Category)
@@ -68,6 +71,24 @@ class ProductAdmin(admin.ModelAdmin):
     date_hierarchy = 'created_at'
     list_select_related = ('store', 'category')
     readonly_fields = ('created_at', 'updated_at')
+    
+    # class Media:
+    #     css = {
+    #         'all': ('css/admin.css',)
+    #     }
+    
+    def get_fieldsets(self, request, obj=None):
+        # Add custom CSS for two-column layout
+        # self.change_form_template = 'admin/product/change_form.html'
+        return (
+            (None, {
+                'fields': ('store', 'name', 'slug', 'description', 'status')
+            }),
+            ('Metadata', {
+                'classes': ('wide', 'extrapretty', 'right-column'),
+                'fields': ('category', 'created_at', 'updated_at'),
+            }),
+        )
     
     def variant_count(self, obj):
         return obj.variants.count()

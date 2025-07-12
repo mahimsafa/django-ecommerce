@@ -1,0 +1,192 @@
+{% extends "admin/change_form.html" %}
+{% load static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+    /* Main layout */
+    .form-row {
+        display: flex;
+        flex-wrap: wrap;
+        /* gap: 20px; */
+    }
+    
+    .main-form-row {
+        flex: 1;
+        min-width: 0; /* Prevents flex items from overflowing */
+    }
+    
+    .right-column {
+        width: 340px;
+        /* background: #fff; */
+
+        /* border: 1px solid #e2e8f0; */
+        border-radius: 8px;
+        /* padding: 24px; */
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        align-self: flex-start;
+    }
+    
+    /* Right column content */
+    .right-column fieldset {
+        border: none;
+        margin: 0;
+        padding: 0;
+    }
+    
+    .right-column h2 {
+        font-size: 16px;
+        margin: 0 0 20px 0;
+        padding: 0 0 12px 0;
+        border-bottom: 1px solid #edf2f7;
+        /* color: #2d3748; */
+    }
+    
+    .right-column .form-fields {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .right-column .form-row {
+        margin: 0;
+        padding: 0;
+        display: block;
+    }
+    
+    .right-column .field-box {
+        width: 100%;
+    }
+    
+    .right-column label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 8px;
+        /* color: #4a5568; */
+        font-size: 13px;
+    }
+    
+    .right-column input[type="text"],
+    .right-column input[type="number"],
+    .right-column input[type="email"],
+    .right-column input[type="password"],
+    .right-column input[type="url"],
+    .right-column input[type="tel"],
+    .right-column select,
+    .right-column textarea {
+        width: 100%;
+        padding: 10px 12px;
+        /* border: 1px solid #e2e8f0; */
+        border-radius: 6px;
+        /* background-color: #fff; */
+        /* color: #2d3748; */
+        font-size: 14px;
+        line-height: 1.5;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    
+    .right-column input:focus,
+    .right-column select:focus,
+    .right-column textarea:focus {
+        /* border-color: #4299e1; */
+        box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
+        outline: none;
+    }
+    
+    .right-column .readonly {
+        /* background-color: #f8fafc; */
+        padding: 10px 12px;
+        /* border: 1px solid #e2e8f0; */
+        border-radius: 6px;
+        /* color: #4a5568; */
+        font-size: 14px;
+        line-height: 1.5;
+    }
+    
+    .right-column .help {
+        font-size: 12px;
+        /* color: #718096; */
+        margin-top: 6px;
+        line-height: 1.4;
+    }
+    
+    .right-column .errors {
+        color: #e53e3e;
+        font-size: 12px;
+        margin-top: 4px;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 1024px) {
+        .form-row {
+            flex-direction: column;
+        }
+        
+        .right-column {
+            width: 100%;
+            margin-bottom: 24px;
+        }
+    }
+    
+    /* Fix for datetime fields */
+    .right-column .datetime {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .right-column .datetime input {
+        width: 100% !important;
+    }
+</style>
+{% endblock %}
+
+{% block field_sets %}
+<div class="form-row">
+    <div class="main-form-row">
+        {% for fieldset in adminform %}
+            {% if not fieldset.name == 'Metadata' %}
+                {% include "admin/includes/fieldset.html" %}
+            {% endif %}
+        {% endfor %}
+    </div>
+    
+    <div class="right-column">
+        {% for fieldset in adminform %}
+            {% if fieldset.name == 'Metadata' %}
+                <fieldset class="module aligned {{ fieldset.classes }}">
+                    {% if fieldset.name %}
+                        <h2>{{ fieldset.name }}</h2>
+                    {% endif %}
+                    {% if fieldset.description %}
+                        <div class="description">{{ fieldset.description|safe }}</div>
+                    {% endif %}
+                    
+                    <div class="form-fields">
+                        {% for line in fieldset %}
+                            {% for field in line %}
+                                <div class="form-row field-{{ field.field.name }}">
+                                    <div class="field-box">
+                                        {{ field.label_tag }}
+                                        {% if field.is_readonly %}
+                                            <div class="readonly">{{ field.contents|linebreaksbr }}</div>
+                                        {% else %}
+                                            {{ field.field }}
+                                        {% endif %}
+                                        {% if field.field.help_text %}
+                                            <div class="help">{{ field.field.help_text|safe }}</div>
+                                        {% endif %}
+                                        {% if field.field.errors %}
+                                            <div class="errors">{{ field.field.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% endfor %}
+                    </div>
+                </fieldset>
+            {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
