@@ -1,11 +1,6 @@
 from django.db import models
-from django.db.models.signals import pre_save
-from django.dispatch import receiver
-from django.core.exceptions import ValidationError
-import uuid
 from store.models import Store
 from django.utils.text import slugify
-from django.core.validators import MinValueValidator
 from mptt.models import MPTTModel, TreeForeignKey
 
 # Create your models here.
@@ -113,13 +108,3 @@ class Image(models.Model):
     def __str__(self):
         target = self.variant if self.variant else self.product
         return f"Image for {target}"
-
-
-# @receiver(pre_save, sender=Product)
-# def ensure_variants_exist(sender, instance, **kwargs):
-#     """
-#     Ensure a product has at least one variant before saving.
-#     This is a safety check in case the admin form bypasses the clean method.
-#     """
-#     if instance.pk and not instance.variants.exists():
-#         raise ValidationError('A product must have at least one variant.')
