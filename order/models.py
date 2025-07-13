@@ -1,5 +1,7 @@
+from decimal import Decimal
 from django.conf import settings
 from django.db import models
+from django.db.models import F, Sum
 from django.utils import timezone
 from django.core.validators import MinValueValidator
 from django.core.exceptions import ValidationError
@@ -121,18 +123,20 @@ class Order(models.Model):
         """
         Update order totals by recalculating from order items.
         """
-        from django.db.models import Sum
-        
         # Calculate subtotal from order items
-        result = self.items.aggregate(
-            subtotal=Sum(F('unit_price') * F('quantity'), output_field=models.DecimalField())
+        self.subtotal = sum(
+            item.unit_price * item.quantity 
+            for item in self.items.all()
         )
         
-        self.subtotal = result['subtotal'] or Decimal('0.00')
-        
         # Recalculate total
-        self.total = self.subtotal + self.tax + self.shipping_cost - self.discount_total
-        self.save()
+        self.total = (
+            self.subtotal + 
+            (self.tax or 0) + 
+            (self.shipping_cost or 0) - 
+            (self.discount_total or 0)
+        )
+        self.save(update_fields=['subtotal', 'total'])
     
     def can_cancel(self):
         """Check if the order can be cancelled."""

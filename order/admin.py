@@ -8,19 +8,18 @@ from .models import Order, OrderItem
 class OrderItemInline(admin.TabularInline):
     model = OrderItem
     extra = 0
-    readonly_fields = ('get_variant_link', 'quantity', 'unit_price', 'tax_amount', 'discount_amount', 'get_line_total')
-    fields = ('get_variant_link', 'quantity', 'unit_price', 'tax_amount', 'discount_amount', 'get_line_total')
+    readonly_fields = ('variant_info', 'quantity', 'unit_price', 'tax_amount', 'discount_amount', 'line_total_display')
+    fields = ('variant_info', 'quantity', 'unit_price', 'tax_amount', 'discount_amount', 'line_total_display')
     
-    def get_variant_link(self, obj):
+    def variant_info(self, obj):
         if obj.variant:
-            url = reverse('admin:product_productvariant_change', args=[obj.variant.id])
-            return mark_safe(f'<a href="{url}">{obj.variant}</a>')
+            return str(obj.variant)
         return "-"
-    get_variant_link.short_description = 'Variant'
+    variant_info.short_description = 'Variant'
     
-    def get_line_total(self, obj):
-        return obj.line_total
-    get_line_total.short_description = 'Line Total'
+    def line_total_display(self, obj):
+        return f"${obj.line_total:.2f}"
+    line_total_display.short_description = 'Line Total'
     
     def has_add_permission(self, request, obj=None):
         return False
@@ -40,7 +39,7 @@ class OrderAdmin(admin.ModelAdmin):
     )
     inlines = [OrderItemInline]
     date_hierarchy = 'placed_at'
-    list_select_related = ('customer', 'store', 'customer__tenant')
+    list_select_related = ('customer', 'store')
     actions = ['mark_as_processing', 'mark_as_completed', 'mark_as_cancelled']
     
     fieldsets = (
@@ -108,11 +107,11 @@ class OrderItemAdmin(admin.ModelAdmin):
     get_variant.admin_order_field = 'variant__name'
     
     def get_line_total(self, obj):
-        return obj.get_line_total()
+        return f"${obj.line_total:.2f}"
     get_line_total.short_description = 'Line Total'
     
     def has_add_permission(self, request):
         return False
     
     def has_delete_permission(self, request, obj=None):
-        return False
+        return True

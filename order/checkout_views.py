@@ -1,7 +1,9 @@
+from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
+from django.db.models import F
 from django.urls import reverse
 from django.utils import timezone
 
@@ -104,54 +106,72 @@ def process_checkout(request):
     # Start a transaction to ensure data consistency
     with transaction.atomic():
         try:
-            # Create the order
+            # Calculate order totals
+            subtotal = sum(item.get_subtotal() for item in cart.items.all())
+            # tax = sum(cart.get_tax_for_store(store) for store in cart.get_stores())
+            tax=0
+            # shipping_cost = sum(cart.get_shipping_for_store(store) for store in cart.get_stores())
+            shipping_cost=0
+            total = cart.get_grand_total()
+            
+            # Create the order with the user object instead of customer
+            print('order creating')
             order = Order.objects.create(
                 store=store,
-                customer=customer,
+                customer=request.user,  # Use the user object instead of customer
                 shipping_address=shipping_address,
                 billing_address=billing_address,
                 status='pending',
                 placed_at=timezone.now(),
-                subtotal=cart.get_subtotal(),
-                tax=cart.get_tax(),
-                shipping_cost=cart.get_shipping_cost(),
-                total=cart.get_total(),
+                subtotal=subtotal,
+                tax=tax,
+                shipping_cost=shipping_cost,
+                total=total,
             )
-            
+            print('order created')
             # Create order items from cart items
             for item in cart.items.all():
+                print('Current item: ', item)
                 # Create or get order product
                 product, _ = OrderProduct.objects.get_or_create(
                     store=store,
-                    name=item.variant.product.name,
                     sku=item.variant.sku,
                     defaults={
+                        'name': item.variant.product.name,
                         'description': item.variant.product.description,
                     }
                 )
+                print('product created')
                 
-                # Create order product variant
-                variant = OrderProductVariant.objects.create(
-                    product=product,
-                    name=item.variant.name,
+                # Check if variant already exists
+                variant, created = OrderProductVariant.objects.get_or_create(
                     sku=item.variant.sku,
-                    stock=item.variant.stock,
+                    defaults={
+                        'product': product,
+                        'name': item.variant.name,
+                    }
                 )
                 
-                # Create price for the variant
-                OrderProductPrice.objects.create(
+                # Create or update price for the variant
+                OrderProductPrice.objects.update_or_create(
                     variant=variant,
-                    amount=item.unit_price,
-                    currency='USD',  # You might want to make this dynamic
+                    defaults={
+                        'amount': item.unit_price,
+                        'currency': 'USD',  # You might want to make this dynamic
+                    }
                 )
                 
                 # Create order item
-                OrderItem.objects.create(
-                    order=order,
-                    variant=variant,
-                    quantity=item.quantity,
-                    unit_price=item.unit_price,
-                )
+                try:
+                    OrderItem.objects.create(
+                        order=order,
+                        variant=variant,
+                        quantity=item.quantity,
+                        unit_price=item.unit_price,
+                    )
+                except Exception as e:
+                    print(f"Error creating order item: {str(e)}")
+                print('order item created')
             
             # Clear the cart
             cart.items.all().delete()
@@ -168,9 +188,10 @@ def process_checkout(request):
             messages.error(request, "An error occurred while processing your order. Please try again.")
             return redirect('order:checkout')
 
+@login_required
 def order_confirmation(request, order_id):
     """
     Display the order confirmation page after a successful checkout.
     """
-    order = get_object_or_404(Order, id=order_id, customer__user=request.user)
+    order = get_object_or_404(Order, id=order_id, customer=request.user)
     return render(request, 'order/order_confirmation.html', {'order': order})
