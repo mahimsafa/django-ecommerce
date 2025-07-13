@@ -100,14 +100,21 @@
                         <h6 class="mb-3">{{ store.name }}</h6>
                         <ul class="list-group mb-3">
                             {% for item in items %}
-                                <li class="list-group-item d-flex justify-content-between lh-condensed">
-                                    <div>
-                                        <h6 class="my-0">{{ item.variant.product.name }}</h6>
-                                        <small class="text-muted">
-                                            {{ item.variant.name }} × {{ item.quantity }}
-                                        </small>
+                                <li class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="me-3">
+                                            <h6 class="my-0">{{ item.variant.product.name }}</h6>
+                                            <small class="text-muted">
+                                                {{ item.variant.name }}
+                                            </small>
+                                        </div>
+                                        <div class="text-end">
+                                            <div class="text-muted">
+                                                ${{ item.unit_price|floatformat:2 }} × {{ item.quantity }}
+                                            </div>
+                                            <strong>${{ item.get_total|floatformat:2 }}</strong>
+                                        </div>
                                     </div>
-                                    <span class="text-muted">${{ item.get_total|floatformat:2 }}</span>
                                 </li>
                             {% endfor %}
                             {% with store_total=store_totals|get_item:store.id %}
@@ -117,13 +124,7 @@
                                         <strong>${{ store_total.shipping|floatformat:2 }}</strong>
                                     </li>
                                 {% endif %}
-                                {% if store_total and store_total.tax > 0 %}
-                                    <li class="list-group-item d-flex justify-content-between">
-                                        <span>Tax</span>
-                                        <strong>${{ store_total.tax|floatformat:2 }}</strong>
-                                    </li>
-                                {% endif %}
-                                <li class="list-group-item d-flex justify-content-between">
+                                <li class="list-group-item d-flex justify-content-between bg-light">
                                     <span>Store Total</span>
                                     <strong>${{ store_total.total|default:0|floatformat:2 }}</strong>
                                 </li>
