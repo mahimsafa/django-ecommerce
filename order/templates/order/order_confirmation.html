@@ -95,6 +95,7 @@
                                 {% endwith %}
                             </p>
                             <p class="mb-1"><strong>Email:</strong> {{ order.customer.email }}</p>
+                            <p class="mb-1"><strong>Phone:</strong> {{ order.customer.phone }}</p>
                         </div>
                     </div>
                     
@@ -186,11 +187,11 @@
                             <a href="#" class="text-decoration-none">customer support</a>.
                         </p>
                         <div class="mt-3">
-                            <button onclick="window.print()" class="btn btn-primary me-2">
-                                <i class="bi bi-printer me-1"></i> Print Invoice
-                            </button>
-                            <a href="{% url 'store_front:home' %}" class="btn btn-outline-secondary">
-                                <i class="bi bi-house-door me-1"></i> Back to Home
+                            <a href="{% url 'store_front:home' %}" class="btn btn-outline-primary me-md-2">
+                                <span>Continue Shopping</span>
+                            </a>
+                            <a href="{% url 'order:order_detail' order.id %}" class="btn btn-primary">
+                                <span>View Order Details</span>
                             </a>
                         </div>
                     </div>
@@ -202,15 +203,6 @@
                         </p>
                     </div>
                         </div>
-                    </div>
-                    
-                    <div class="d-grid gap-2 d-md-flex justify-content-md-center">
-                        <a href="{% url 'store_front:home' %}" class="btn btn-outline-primary me-md-2">
-                            Continue Shopping
-                        </a>
-                        <a href="{% url 'order:order_detail' order.id %}" class="btn btn-primary">
-                            View Order Details
-                        </a>
                     </div>
                 </div>
             </div>
