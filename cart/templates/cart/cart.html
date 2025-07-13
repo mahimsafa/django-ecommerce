@@ -126,9 +126,12 @@
                     <a href="{% url 'store_front:home' %}" class="btn btn-outline-secondary">
                         <i class="fas fa-arrow-left me-2"></i> Continue Shopping
                     </a>
-                    <button id="clear-cart" class="btn btn-outline-danger">
-                        <i class="fas fa-trash me-2"></i> Clear Cart
-                    </button>
+                    <form id="clear-cart-form" method="post" action="{% url 'cart:clear_cart' %}" style="display: inline-block;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger">
+                            <i class="fas fa-trash me-2"></i> Clear Cart
+                        </button>
+                    </form>
                 </div>
             </div>
             
@@ -292,12 +295,12 @@
             });
         });
 
-        // Handle clear cart
-        const clearCartBtn = document.getElementById('clear-cart');
-        if (clearCartBtn) {
-            clearCartBtn.addEventListener('click', function() {
-                if (confirm('Are you sure you want to clear your cart?')) {
-                    clearCart();
+        // Handle clear cart form submission
+        const clearCartForm = document.getElementById('clear-cart-form');
+        if (clearCartForm) {
+            clearCartForm.addEventListener('submit', function(e) {
+                if (!confirm('Are you sure you want to clear your cart?')) {
+                    e.preventDefault();
                 }
             });
         }
