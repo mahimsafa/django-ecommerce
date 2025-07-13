@@ -15,7 +15,24 @@ from order.models import Order
 @login_required
 def profile_view(request):
     """Customer profile view"""
-    customer = get_object_or_404(Customer, user=request.user)
+    # Get the default store (you might want to change this logic based on your requirements)
+    from store.models import Store
+    default_store = Store.objects.first()
+    
+    if not default_store:
+        # If no store exists, create one (or handle this case as needed)
+        default_store = Store.objects.create(name="Default Store")
+    
+    # Get or create customer profile
+    customer, created = Customer.objects.get_or_create(
+        user=request.user,
+        defaults={
+            'store': default_store,
+            'email': request.user.email,
+            'first_name': request.user.first_name,
+            'last_name': request.user.last_name
+        }
+    )
     return render(request, 'customer/profile.html', {'customer': customer})
 
 

@@ -17,14 +17,14 @@
                 </div>
                 <div class="card-body">
                     <div class="mb-3">
-                        <label for="email" class="form-label">Email address</label>
-                        <input type="email" class="form-control" id="email" name="email" 
-                               value="{{ request.user.email|default:'' }}" required>
+                        <label for="email"  class="form-label">Email address</label>
+                        <input type="email" class="form-control" id="email-input" 
+                               value="{{ customer.email|default:'' }}" required>
                         <div class="form-text">We'll send order confirmation to this email.</div>
                     </div>
                     <div class="mb-3">
                         <label for="phone" class="form-label">Phone number</label>
-                        <input type="tel" class="form-control" id="phone" name="phone" 
+                        <input type="tel" class="form-control" id="phone-input" 
                                value="{{ customer.phone|default:'' }}" required>
                         <div class="form-text">We'll contact you if there are any issues with your order.</div>
                     </div>
@@ -167,6 +167,8 @@
                         {% if shipping_address and billing_address %}
                             <form method="post" action="{% url 'order:process_checkout' %}">
                                 {% csrf_token %}
+                                <input type="hidden" name="email" id="email-hidden" value="{{ customer.email }}">
+                                <input type="hidden" name="phone" id="phone-hidden" value="{{ customer.phone }}">
                                 <input type="hidden" name="shipping_address" value="{{ shipping_address.id }}">
                                 <input type="hidden" name="billing_address" value="{{ billing_address.id }}">
                                 <button type="submit" class="btn btn-primary btn-lg w-100">
@@ -191,6 +193,20 @@
 
 {% block extra_js %}
 <script>
+    const emailInput = document.getElementById('email-input');
+    const phoneInput = document.getElementById('phone-input');
+
+
+
+    // now listen for changes on email and phone input and add the values to hidden inputs
+    emailInput.addEventListener('input', function() {
+        document.getElementById('email-hidden').value = emailInput.value;
+    });
+    phoneInput.addEventListener('input', function() {
+        document.getElementById('phone-hidden').value = phoneInput.value;
+    });
+
+    
     // Add any client-side validation or interactivity here
     document.addEventListener('DOMContentLoaded', function() {
         // Example: Disable place order button if any required field is missing

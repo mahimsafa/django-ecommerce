@@ -103,6 +103,17 @@ def process_checkout(request):
         messages.error(request, "Please provide valid shipping and billing addresses.")
         return redirect('order:checkout')
     
+    # Get email and phone from the request
+    email = request.POST.get('email', '')
+    phone = request.POST.get('phone', '')
+
+    print('email', email)
+    print('phone', phone)
+    
+    if not email or not phone:
+        messages.error(request, "Email and phone are required.")
+        return redirect('order:checkout')
+    
     # Start a transaction to ensure data consistency
     with transaction.atomic():
         try:
