@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ block.super }} - My Account{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">My Account</h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a href="{% url 'customer:profile' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'profile' %}active{% endif %}">
+                        Dashboard
+                    </a>
+                    <a href="{% url 'customer:order_history' %}" class="list-group-item list-group-item-action {% if 'order' in request.resolver_match.url_name %}active{% endif %}">
+                        My Orders
+                    </a>
+                    <a href="{% url 'customer:address_list' %}" class="list-group-item list-group-item-action {% if 'address' in request.resolver_match.url_name %}active{% endif %}">
+                        Address Book
+                    </a>
+                    <a href="{% url 'customer:account_settings' %}" class="list-group-item list-group-item-action {% if 'settings' in request.resolver_match.url_name %}active{% endif %}">
+                        Account Settings
+                    </a>
+                    <a href="{% url 'logout' %}" class="list-group-item list-group-item-action text-danger">
+                        Logout
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="col-md-9">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+            
+            {% block customer_content %}
+            {% endblock %}
+        </div>
+    </div>
+</div>
+{% endblock %}

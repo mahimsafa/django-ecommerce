@@ -10,23 +10,6 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 
 
-class Tenant(models.Model):
-    """
-    Represents a tenant (user account) in the multi-tenant system.
-    Each tenant can own multiple stores.
-    """
-    owner = models.OneToOneField(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="tenant",
-    )
-    name = models.CharField(max_length=255)
-    created_at = models.DateTimeField(default=timezone.now)
-
-    def __str__(self):
-        return self.name
-
-
 class Order(models.Model):
     """
     Represents a customer's order in the system.
@@ -59,11 +42,19 @@ class Order(models.Model):
         default=0,
         validators=[MinValueValidator(Decimal('0.00'))]
     )
-    tax_total = models.DecimalField(
+    tax = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         default=0,
-        validators=[MinValueValidator(Decimal('0.00'))]
+        validators=[MinValueValidator(Decimal('0.00'))],
+        help_text='Tax amount for the order'
+    )
+    shipping_cost = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        validators=[MinValueValidator(Decimal('0.00'))],
+        help_text='Shipping cost for the order'
     )
     discount_total = models.DecimalField(
         max_digits=10,
@@ -77,6 +68,37 @@ class Order(models.Model):
         default=0,
         validators=[MinValueValidator(Decimal('0.00'))]
     )
+    shipping_address = models.ForeignKey(
+        'customer.Address',
+        on_delete=models.PROTECT,
+        related_name='shipping_orders',
+        null=True,
+        blank=True
+    )
+    billing_address = models.ForeignKey(
+        'customer.Address',
+        on_delete=models.PROTECT,
+        related_name='billing_orders',
+        null=True,
+        blank=True
+    )
+    payment_method = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True,
+        help_text='Payment method used for this order'
+    )
+    payment_status = models.CharField(
+        max_length=20,
+        default='pending',
+        choices=[
+            ('pending', 'Pending'),
+            ('paid', 'Paid'),
+            ('failed', 'Failed'),
+            ('refunded', 'Refunded'),
+        ]
+    )
+    notes = models.TextField(blank=True, help_text='Additional notes for the order')
     placed_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -87,9 +109,54 @@ class Order(models.Model):
         return f"Order #{self.id} - {self.get_status_display()}"
 
     def save(self, *args, **kwargs):
-        # Ensure total is always calculated from subtotal, tax, and discount
-        self.total = self.subtotal + self.tax_total - self.discount_total
+        # Ensure total is always calculated from subtotal, tax, shipping, and discount
+        self.total = self.subtotal + self.tax + self.shipping_cost - self.discount_total
         super().save(*args, **kwargs)
+    
+    def get_absolute_url(self):
+        from django.urls import reverse
+        return reverse('order:order_detail', args=[str(self.id)])
+    
+    def update_totals(self):
+        """
+        Update order totals by recalculating from order items.
+        """
+        from django.db.models import Sum
+        
+        # Calculate subtotal from order items
+        result = self.items.aggregate(
+            subtotal=Sum(F('unit_price') * F('quantity'), output_field=models.DecimalField())
+        )
+        
+        self.subtotal = result['subtotal'] or Decimal('0.00')
+        
+        # Recalculate total
+        self.total = self.subtotal + self.tax + self.shipping_cost - self.discount_total
+        self.save()
+    
+    def can_cancel(self):
+        """Check if the order can be cancelled."""
+        return self.status in ['pending', 'processing']
+    
+    def mark_as_paid(self, payment_method=None):
+        """Mark the order as paid."""
+        if payment_method:
+            self.payment_method = payment_method
+        self.payment_status = 'paid'
+        if self.status == 'pending':
+            self.status = 'processing'
+        self.save()
+    
+    def get_items_by_store(self):
+        """Group order items by store."""
+        from collections import defaultdict
+        items_by_store = defaultdict(list)
+        
+        for item in self.items.all():
+            store = item.variant.product.store
+            items_by_store[store].append(item)
+            
+        return dict(items_by_store)
 
 
 class OrderItem(models.Model):
@@ -129,15 +196,38 @@ class OrderItem(models.Model):
     )
 
     class Meta:
-        ordering = ['order', 'id']
-        unique_together = ('order', 'variant')
+        ordering = ['id']
+        verbose_name = 'Order Item'
+        verbose_name_plural = 'Order Items'
 
     def __str__(self):
-        return f"{self.quantity}x {self.variant} in Order #{self.order_id}"
-
+        return f"{self.quantity}x {self.variant} (Order #{self.order_id})"
+    
     @property
     def line_total(self):
+        """
+        Calculate the total price for this line item (quantity * unit_price).
+        """
         return (self.unit_price * self.quantity) + self.tax_amount - self.discount_amount
+    
+    def save(self, *args, **kwargs):
+        """
+        Override save to update order totals when an item is saved.
+        """
+        is_new = self._state.adding
+        super().save(*args, **kwargs)
+        
+        # Update order totals if this is a new item or quantity/price changed
+        if is_new or self.order.items.count() == 1:
+            self.order.update_totals()
+    
+    def delete(self, *args, **kwargs):
+        """
+        Override delete to update order totals when an item is removed.
+        """
+        order = self.order
+        super().delete(*args, **kwargs)
+        order.update_totals()
 
 
 class StoreStaff(models.Model):

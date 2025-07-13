@@ -1,0 +1,62 @@
+{% extends 'customer/base.html' %}
+
+{% block customer_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">My Addresses</h4>
+    <a href="{% url 'customer:address_create' %}" class="btn btn-primary">
+        <i class="fas fa-plus me-1"></i> Add New Address
+    </a>
+</div>
+
+<div class="row">
+    {% for address in addresses %}
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">{{ address.get_address_type_display }}</h5>
+                    {% if address.is_default %}
+                        <span class="badge bg-success">Default</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <address class="mb-0">
+                        {{ address.full_name }}<br>
+                        {% if address.company %}{{ address.company }}<br>{% endif %}
+                        {{ address.street_address_1 }}<br>
+                        {% if address.street_address_2 %}{{ address.street_address_2 }}<br>{% endif %}
+                        {{ address.city }}, {{ address.state }} {{ address.postal_code }}<br>
+                        {{ address.get_country_display }}<br>
+                        {% if address.phone %}{{ address.phone }}{% endif %}
+                    </address>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <div class="btn-group">
+                        <a href="{% url 'customer:address_update' address.id %}" class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
+                        <a href="{% url 'customer:address_delete' address.id %}" class="btn btn-sm btn-outline-danger">
+                            <i class="fas fa-trash"></i> Delete
+                        </a>
+                        {% if not address.is_default %}
+                            <form method="post" action="{% url 'customer:set_default_address' address.id address.address_type %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-check"></i> Set as Default
+                                </button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info">
+                You haven't added any addresses yet. 
+                <a href="{% url 'customer:address_create' %}" class="alert-link">Add your first address</a> 
+                to make checkout faster.
+            </div>
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}

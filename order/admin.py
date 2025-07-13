@@ -35,7 +35,7 @@ class OrderAdmin(admin.ModelAdmin):
     list_filter = ('status', 'store', 'placed_at')
     search_fields = ('id', 'customer__email', 'customer__first_name', 'customer__last_name')
     readonly_fields = (
-        'placed_at', 'updated_at', 'get_customer', 'subtotal', 'tax_total', 
+        'placed_at', 'updated_at', 'get_customer', 'subtotal', 'tax', 
         'discount_total', 'total', 'item_count'
     )
     inlines = [OrderItemInline]
@@ -48,7 +48,7 @@ class OrderAdmin(admin.ModelAdmin):
             'fields': ('store', 'customer', 'get_customer', 'status')
         }),
         ('Order Totals', {
-            'fields': ('subtotal', 'tax_total', 'discount_total', 'total')
+            'fields': ('subtotal', 'tax', 'discount_total', 'total')
         }),
         ('Metadata', {
             'classes': ('collapse',),

@@ -27,6 +27,7 @@ urlpatterns = [
     path('', include('store_front.urls')),
     path('cart/', include('cart.urls', namespace='cart')),
     path('orders/', include('order.urls', namespace='order')),  # Order management
+    path('customer/', include('customer.urls', namespace='customer')),  # Customer management
     # Authentication URLs
     path('accounts/login/', LoginView.as_view(template_name='registration/login.html'), name='login'),
     path('accounts/', include('django.contrib.auth.urls')),

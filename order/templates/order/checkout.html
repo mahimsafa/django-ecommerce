@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load cart_extras %}
+
+{% block title %}Checkout - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row">
+        <div class="col-md-8">
+            <h2 class="mb-4">Checkout</h2>
+            
+            <!-- Shipping Address -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Shipping Address</h5>
+                </div>
+                <div class="card-body">
+                    {% if shipping_address %}
+                        <div class="mb-3">
+                            <p class="mb-1"><strong>{{ shipping_address.first_name }} {{ shipping_address.last_name }}</strong></p>
+                            <p class="mb-1">{{ shipping_address.street_address1 }}</p>
+                            {% if shipping_address.street_address2 %}
+                                <p class="mb-1">{{ shipping_address.street_address2 }}</p>
+                            {% endif %}
+                            <p class="mb-1">
+                                {{ shipping_address.city }}, {{ shipping_address.state }} {{ shipping_address.postal_code }}
+                            </p>
+                            <p class="mb-1">{{ shipping_address.get_country_display }}</p>
+                            <p class="mb-0">Phone: {{ shipping_address.phone }}</p>
+                        </div>
+                        <a href="{% url 'customer:address_update' shipping_address.id %}" class="btn btn-outline-secondary btn-sm">
+                            Change Shipping Address
+                        </a>
+                    {% else %}
+                        <p>No shipping address saved.</p>
+                        <a href="{% url 'customer:address_create' %}" class="btn btn-primary btn-sm">
+                            Add Shipping Address
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Billing Address -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Billing Address</h5>
+                </div>
+                <div class="card-body">
+                    {% if billing_address %}
+                        <div class="mb-3">
+                            <p class="mb-1"><strong>{{ billing_address.first_name }} {{ billing_address.last_name }}</strong></p>
+                            <p class="mb-1">{{ billing_address.street_address1 }}</p>
+                            {% if billing_address.street_address2 %}
+                                <p class="mb-1">{{ billing_address.street_address2 }}</p>
+                            {% endif %}
+                            <p class="mb-1">
+                                {{ billing_address.city }}, {{ billing_address.state }} {{ billing_address.postal_code }}
+                            </p>
+                            <p class="mb-1">{{ billing_address.get_country_display }}</p>
+                            <p class="mb-0">Phone: {{ billing_address.phone }}</p>
+                        </div>
+                        <a href="{% url 'customer:address_update' billing_address.id %}" class="btn btn-outline-secondary btn-sm">
+                            Change Billing Address
+                        </a>
+                    {% else %}
+                        <p>No billing address saved.</p>
+                        <a href="{% url 'customer:address_create' %}" class="btn btn-primary btn-sm">
+                            Add Billing Address
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Payment Method -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Payment Method</h5>
+                </div>
+                <div class="card-body">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="payment_method" id="cod" value="cod" checked>
+                        <label class="form-check-label" for="cod">
+                            Cash on Delivery (COD)
+                        </label>
+                    </div>
+                    <!-- Add more payment methods as needed -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- Order Summary -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Order Summary</h5>
+                </div>
+                <div class="card-body">
+                    {% for store, items in items_by_store.items %}
+                        <h6 class="mb-3">{{ store.name }}</h6>
+                        <ul class="list-group mb-3">
+                            {% for item in items %}
+                                <li class="list-group-item d-flex justify-content-between lh-condensed">
+                                    <div>
+                                        <h6 class="my-0">{{ item.variant.product.name }}</h6>
+                                        <small class="text-muted">
+                                            {{ item.variant.name }} × {{ item.quantity }}
+                                        </small>
+                                    </div>
+                                    <span class="text-muted">${{ item.get_total|floatformat:2 }}</span>
+                                </li>
+                            {% endfor %}
+                            {% with store_total=store_totals|get_item:store.id %}
+                                {% if store_total and store_total.shipping > 0 %}
+                                    <li class="list-group-item d-flex justify-content-between">
+                                        <span>Shipping</span>
+                                        <strong>${{ store_total.shipping|floatformat:2 }}</strong>
+                                    </li>
+                                {% endif %}
+                                {% if store_total and store_total.tax > 0 %}
+                                    <li class="list-group-item d-flex justify-content-between">
+                                        <span>Tax</span>
+                                        <strong>${{ store_total.tax|floatformat:2 }}</strong>
+                                    </li>
+                                {% endif %}
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Store Total</span>
+                                    <strong>${{ store_total.total|default:0|floatformat:2 }}</strong>
+                                </li>
+                            {% endwith %}
+                        </ul>
+                    {% endfor %}
+                    
+                    <!-- Grand Total -->
+                    <div class="card mt-3">
+                        <div class="card-body p-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Grand Total</h5>
+                                <h4 class="mb-0 text-primary">${{ grand_total|default:0|floatformat:2 }}</h4>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 mt-3">
+                        {% if shipping_address and billing_address %}
+                            <form method="post" action="{% url 'order:process_checkout' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="shipping_address" value="{{ shipping_address.id }}">
+                                <input type="hidden" name="billing_address" value="{{ billing_address.id }}">
+                                <button type="submit" class="btn btn-primary btn-lg w-100">
+                                    Place Order
+                                </button>
+                            </form>
+                        {% else %}
+                            <button class="btn btn-primary btn-lg w-100" disabled>
+                                Complete Address Information
+                            </button>
+                        {% endif %}
+                        <a href="{% url 'cart:view' %}" class="btn btn-outline-secondary mt-2">
+                            Return to Cart
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Add any client-side validation or interactivity here
+    document.addEventListener('DOMContentLoaded', function() {
+        // Example: Disable place order button if any required field is missing
+        const placeOrderBtn = document.querySelector('button[type="submit"]');
+        if (placeOrderBtn) {
+            placeOrderBtn.addEventListener('click', function(e) {
+                if (!document.querySelector('input[name="payment_method"]:checked')) {
+                    e.preventDefault();
+                    alert('Please select a payment method');
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

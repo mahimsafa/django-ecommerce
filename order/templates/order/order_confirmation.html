@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Order Confirmation - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body text-center p-5">
+                    <div class="mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" fill="#28a745" class="bi bi-check-circle" viewBox="0 0 16 16">
+                            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                            <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+                        </svg>
+                    </div>
+                    <h2 class="mb-3">Thank You for Your Order!</h2>
+                    <p class="lead mb-4">Your order has been placed successfully.</p>
+                    
+                    <div class="order-details bg-light p-4 rounded mb-4 text-start">
+                        <h5 class="mb-3">Order Details</h5>
+                        <p class="mb-1"><strong>Order Number:</strong> #{{ order.id }}</p>
+                        <p class="mb-1"><strong>Date:</strong> {{ order.placed_at|date:"F j, Y" }}</p>
+                        <p class="mb-1"><strong>Total:</strong> ${{ order.total|floatformat:2 }}</p>
+                        <p class="mb-0"><strong>Status:</strong> <span class="badge bg-info">{{ order.get_status_display }}</span></p>
+                    </div>
+                    
+                    <div class="shipping-details bg-light p-4 rounded mb-4 text-start">
+                        <div class="row">
+                            <div class="col-md-6 mb-3 mb-md-0">
+                                <h6>Shipping Address</h6>
+                                <p class="mb-0">
+                                    {{ order.shipping_address.first_name }} {{ order.shipping_address.last_name }}<br>
+                                    {{ order.shipping_address.street_address1 }}<br>
+                                    {% if order.shipping_address.street_address2 %}
+                                        {{ order.shipping_address.street_address2 }}<br>
+                                    {% endif %}
+                                    {{ order.shipping_address.city }}, {{ order.shipping_address.state }} {{ order.shipping_address.postal_code }}<br>
+                                    {{ order.shipping_address.get_country_display }}<br>
+                                    Phone: {{ order.shipping_address.phone }}
+                                </p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Billing Address</h6>
+                                <p class="mb-0">
+                                    {{ order.billing_address.first_name }} {{ order.billing_address.last_name }}<br>
+                                    {{ order.billing_address.street_address1 }}<br>
+                                    {% if order.billing_address.street_address2 %}
+                                        {{ order.billing_address.street_address2 }}<br>
+                                    {% endif %}
+                                    {{ order.billing_address.city }}, {{ order.billing_address.state }} {{ order.billing_address.postal_code }}<br>
+                                    {{ order.billing_address.get_country_display }}<br>
+                                    Phone: {{ order.billing_address.phone }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="order-items bg-light p-4 rounded mb-4">
+                        <h5 class="mb-3">Order Items</h5>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Product</th>
+                                        <th>Price</th>
+                                        <th>Quantity</th>
+                                        <th>Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in order.items.all %}
+                                        <tr>
+                                            <td>{{ item.variant.product.name }} - {{ item.variant.name }}</td>
+                                            <td>${{ item.unit_price|floatformat:2 }}</td>
+                                            <td>{{ item.quantity }}</td>
+                                            <td>${{ item.line_total|floatformat:2 }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colspan="3" class="text-end"><strong>Subtotal:</strong></td>
+                                        <td>${{ order.subtotal|floatformat:2 }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="3" class="text-end"><strong>Shipping:</strong></td>
+                                        <td>${{ order.shipping_cost|floatformat:2 }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="3" class="text-end"><strong>Tax:</strong></td>
+                                        <td>${{ order.tax|floatformat:2 }}</td>
+                                    </tr>
+                                    <tr class="table-active">
+                                        <td colspan="3" class="text-end"><strong>Total:</strong></td>
+                                        <td><strong>${{ order.total|floatformat:2 }}</strong></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                        <a href="{% url 'store_front:home' %}" class="btn btn-outline-primary me-md-2">
+                            Continue Shopping
+                        </a>
+                        <a href="{% url 'order:order_detail' order.id %}" class="btn btn-primary">
+                            View Order Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .order-details, .shipping-details, .order-items {
+        background-color: #f8f9fa;
+    }
+    
+    .table th, .table td {
+        vertical-align: middle;
+    }
+    
+    .btn {
+        min-width: 150px;
+    }
+</style>
+{% endblock %}

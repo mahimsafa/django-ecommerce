@@ -1,9 +1,11 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.db.models import Sum, F
+from django.db.models import Sum, F, Q
 from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.http import require_POST
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 from .models import Order, OrderItem
 from customer.models import Customer
@@ -12,10 +14,9 @@ from store.models import Store
 @login_required
 def order_history(request):
     """
-    Display a list of the user's past orders.
+    Display a paginated list of the user's past orders.
     """
     # Get or create customer profile for the current user
-    # Using first store for now - in a multi-store setup, you'd want to get the appropriate store
     store = Store.objects.first()
     if not store:
         messages.error(request, 'No store available.')
@@ -31,16 +32,30 @@ def order_history(request):
         }
     )
     
-    orders = Order.objects.filter(customer=customer).select_related('store')
+    # Get all orders for the customer
+    orders_list = Order.objects.filter(customer=customer)\
+                              .select_related('store')\
+                              .prefetch_related('items')\
+                              .annotate(item_count=Sum('items__quantity'))\
+                              .order_by('-placed_at')
     
-    # Annotate each order with total items count
-    orders = orders.annotate(
-        total_items=Sum('items__quantity')
-    ).order_by('-placed_at')
+    # Pagination
+    page = request.GET.get('page', 1)
+    paginator = Paginator(orders_list, 10)  # Show 10 orders per page
+    
+    try:
+        orders = paginator.page(page)
+    except PageNotAnInteger:
+        orders = paginator.page(1)
+    except EmptyPage:
+        orders = paginator.page(paginator.num_pages)
     
     context = {
         'orders': orders,
         'active_tab': 'orders',
+        'paginator': paginator,
+        'page_obj': orders,
+        'is_paginated': paginator.num_pages > 1,
     }
     return render(request, 'order/order_history.html', context)
 
@@ -65,15 +80,61 @@ def order_detail(request, order_id):
         }
     )
     
+    # Get the order with related data
     order = get_object_or_404(
-        Order.objects.select_related('store', 'customer__user')
-                    .prefetch_related('items__variant__product'),
+        Order.objects.select_related(
+            'store', 
+            'customer__user',
+            'shipping_address',
+            'billing_address'
+        ).prefetch_related(
+            'items__variant__product',
+            'items__variant__product__store'
+        ),
         id=order_id,
         customer=customer
     )
     
+    # Group items by store
+    items_by_store = {}
+    for item in order.items.all():
+        store = item.variant.product.store
+        if store not in items_by_store:
+            items_by_store[store] = []
+        items_by_store[store].append(item)
+    
     context = {
         'order': order,
+        'items_by_store': items_by_store,
         'active_tab': 'orders',
     }
     return render(request, 'order/order_detail.html', context)
+
+
+@login_required
+@require_POST
+def cancel_order(request, order_id):
+    """
+    Cancel an order if it's in a cancellable state.
+    """
+    # Get the order
+    order = get_object_or_404(
+        Order.objects.select_related('customer__user'),
+        id=order_id,
+        customer__user=request.user
+    )
+    
+    # Check if order can be cancelled
+    if not order.can_cancel():
+        messages.error(request, 'This order cannot be cancelled.')
+        return redirect('order:order_detail', order_id=order.id)
+    
+    # Update order status
+    order.status = 'cancelled'
+    order.save(update_fields=['status'])
+    
+    # TODO: Add logic to handle inventory restocking if needed
+    # TODO: Send order cancellation email
+    
+    messages.success(request, f'Order #{order.id} has been cancelled.')
+    return redirect('order:order_detail', order_id=order.id)
