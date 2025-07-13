@@ -16,24 +16,8 @@ def order_history(request):
     """
     Display a paginated list of the user's past orders.
     """
-    # Get or create customer profile for the current user
-    store = Store.objects.first()
-    if not store:
-        messages.error(request, 'No store available.')
-        return redirect('store_front:home')
-    
-    customer, created = Customer.objects.get_or_create(
-        user=request.user,
-        store=store,
-        defaults={
-            'email': request.user.email,
-            'first_name': getattr(request.user, 'first_name', ''),
-            'last_name': getattr(request.user, 'last_name', ''),
-        }
-    )
-    
-    # Get all orders for the customer
-    orders_list = Order.objects.filter(customer=customer)\
+    # Get all orders for the current user
+    orders_list = Order.objects.filter(customer=request.user)\
                               .select_related('store')\
                               .prefetch_related('items')\
                               .annotate(item_count=Sum('items__quantity'))\
@@ -64,36 +48,33 @@ def order_detail(request, order_id):
     """
     Display the details of a specific order.
     """
-    # Get or create customer profile for the current user
-    store = Store.objects.first()
-    if not store:
-        messages.error(request, 'No store available.')
-        return redirect('store_front:home')
-        
-    customer, created = Customer.objects.get_or_create(
-        user=request.user,
-        store=store,
-        defaults={
-            'email': request.user.email,
-            'first_name': getattr(request.user, 'first_name', ''),
-            'last_name': getattr(request.user, 'last_name', ''),
-        }
-    )
-    
     # Get the order with related data
     order = get_object_or_404(
         Order.objects.select_related(
-            'store', 
-            'customer__user',
-            'shipping_address',
-            'billing_address'
+            'customer', 'shipping_address', 'billing_address', 'store'
         ).prefetch_related(
+            'items',
+            'items__variant',
             'items__variant__product',
             'items__variant__product__store'
         ),
         id=order_id,
-        customer=customer
+        customer=request.user  # Filter by the user instead of customer profile
     )
+    
+    # Get or create customer profile for the current user
+    store = Store.objects.first()
+    customer_profile = None
+    if store:
+        customer_profile, created = Customer.objects.get_or_create(
+            user=request.user,
+            store=store,
+            defaults={
+                'email': request.user.email,
+                'first_name': getattr(request.user, 'first_name', ''),
+                'last_name': getattr(request.user, 'last_name', ''),
+            }
+        )
     
     # Group items by store
     items_by_store = {}
@@ -105,6 +86,7 @@ def order_detail(request, order_id):
     
     context = {
         'order': order,
+        'customer': customer_profile,  # Add customer profile to context
         'items_by_store': items_by_store,
         'active_tab': 'orders',
     }

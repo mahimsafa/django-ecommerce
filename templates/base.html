@@ -27,9 +27,9 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'store_front:store_list' %}">Stores</a>
                     </li>
-                    <li class="nav-item">
+                    <!-- <li class="nav-item">
                         <a class="nav-link" href="#">Products</a>
-                    </li>
+                    </li> -->
                     <!-- <li class="nav-item">
                         <a class="nav-link position-relative" href="{% url 'cart:view' %}">
                             <i class="fas fa-shopping-cart"></i>
@@ -58,10 +58,14 @@
                                 </a></li>
                                 <li><hr class="dropdown-divider"></li>
                                 {% endif %}
+
+                                <li><a class="dropdown-item" href="{% url 'customer:profile' %}">
+                                    <i class="fas fa-user me-2"></i>My Profile
+                                </a></li>
                                 <li><a class="dropdown-item" href="{% url 'order:order_history' %}">
                                     <i class="fas fa-box me-2"></i>My Orders
                                 </a></li>
-                                <li><a class="dropdown-item" href="#">
+                                <li><a class="dropdown-item" href="{% url 'customer:account_settings' %}">
                                     <i class="fas fa-user-cog me-2"></i>Account Settings
                                 </a></li>
                                 <li><hr class="dropdown-divider"></li>

@@ -113,8 +113,8 @@ class OrderHistoryView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         return Order.objects.filter(
-            customer__user=self.request.user
-        ).select_related('store').order_by('-created_at')
+            customer=self.request.user
+        ).select_related('store', 'shipping_address', 'billing_address')
 
 
 class OrderDetailView(LoginRequiredMixin, DetailView):
@@ -124,7 +124,7 @@ class OrderDetailView(LoginRequiredMixin, DetailView):
     context_object_name = 'order'
 
     def get_queryset(self):
-        return Order.objects.filter(customer__user=self.request.user)
+        return Order.objects.filter(customer=self.request.user).select_related('store', 'shipping_address', 'billing_address')
 
 
 class AccountSettingsView(LoginRequiredMixin, UpdateView):

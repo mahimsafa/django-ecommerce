@@ -85,7 +85,15 @@
                         </div>
                         <div class="col-md-6">
                             <h5>Customer Information</h5>
-                            <p class="mb-1"><strong>Name:</strong> {{ order.customer.get_full_name|default:order.customer.username }}</p>
+                            <p class="mb-1"><strong>Name:</strong> 
+                                {% with user=order.customer %}
+                                    {% if user.get_full_name %}
+                                        {{ user.get_full_name }}
+                                    {% else %}
+                                        {{ user.username }}
+                                    {% endif %}
+                                {% endwith %}
+                            </p>
                             <p class="mb-1"><strong>Email:</strong> {{ order.customer.email }}</p>
                         </div>
                     </div>
