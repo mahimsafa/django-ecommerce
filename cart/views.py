@@ -38,10 +38,6 @@ def add_to_cart(request, variant_id):
         # Update cart timestamp
         cart.save()
         
-        # Debug output
-        print(f"Added to cart - Product: {variant.product.name}, Store: {store.name}, Qty: {quantity}, Cart ID: {cart.id}")
-        print(f"Current cart items: {cart.items.count()}")
-        
         is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
         
         if is_ajax:
@@ -55,13 +51,10 @@ def add_to_cart(request, variant_id):
         return redirect('cart:view')
         
     except Exception as e:
-        print(f"Error adding to cart: {str(e)}")
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'success': False, 'error': str(e)}, status=400)
         messages.error(request, f"Error adding item to cart: {str(e)}")
         return redirect('store_front:home')
-            
-        messages.error(request, 'Error adding item to cart. Please try again.')
         return redirect(request.META.get('HTTP_REFERER', 'store_front:home'))
 
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -75,8 +68,6 @@ def cart_count(request):
             count = cart.items.count()
         return JsonResponse({'count': count, 'status': 'success'})
     except Exception as e:
-        import traceback
-        print(f"Error in cart_count: {str(e)}\n{traceback.format_exc()}")
         return JsonResponse({'count': 0, 'status': 'error', 'message': str(e)})
 
 class CartView(View):
@@ -89,16 +80,6 @@ class CartView(View):
             # Group items by store
             store_items = cart.get_items_by_store()
             
-            # Debug output
-            print("\n=== CART DEBUG ===")
-            print(f"Cart ID: {cart.id}")
-            print(f"Total items: {cart.items.count()}")
-            print(f"Stores in cart: {len(store_items)}")
-            for store, items in store_items.items():
-                print(f"- {store.name} (ID: {store.id}): {len(items)} items")
-                for item in items:
-                    print(f"  - {item.variant.product.name} (Qty: {item.quantity})")
-            print("==================\n")
             
             # Get all items for backward compatibility
             all_items = cart.items.select_related('variant__product__store').all()
@@ -112,9 +93,6 @@ class CartView(View):
             return render(request, self.template_name, context)
             
         except Exception as e:
-            import traceback
-            print(f"Error in CartView: {str(e)}")
-            print(traceback.format_exc())
             messages.error(request, f"Error loading cart. Please try again.")
             return render(request, self.template_name, {'cart': None, 'store_items': {}})
 
