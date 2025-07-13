@@ -1,0 +1,44 @@
+{% extends 'store_admin/base.html' %}
+{% block title %}Products - Store Admin{% endblock %}
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold">Products</h1>
+    <a href="{% url 'store_admin:product_add' %}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Add Product</a>
+</div>
+<div class="bg-white rounded shadow overflow-x-auto">
+    <table class="min-w-full">
+        <thead>
+            <tr class="bg-gray-100">
+                <th class="py-2 px-4 text-left">ID</th>
+                <th class="py-2 px-4 text-left">Name</th>
+                <th class="py-2 px-4 text-left">Price</th>
+                <th class="py-2 px-4 text-left">Stock</th>
+                <th class="py-2 px-4 text-left">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for product in products %}
+                <tr>
+                    <td class="py-2 px-4">{{ product.id }}</td>
+                    <td class="py-2 px-4">{{ product.name }}</td>
+                    <td class="py-2 px-4">
+                        {% with variant=product.variants.first %}
+                            {% if variant %}${{ variant.default_price }}{% else %}-{% endif %}
+                        {% endwith %}
+                    </td>
+                    <td class="py-2 px-4">
+                        {% with variant=product.variants.first %}
+                            {% if variant %}{{ variant.stock }}{% else %}-{% endif %}
+                        {% endwith %}
+                    </td>
+                    <td class="py-2 px-4">
+                        <a href="{% url 'store_admin:product_edit' product.id %}" class="text-blue-600 hover:underline">Edit</a>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="5" class="py-4 text-center text-gray-400">No products found.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %} 

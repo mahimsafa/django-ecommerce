@@ -83,7 +83,7 @@ class Variant(models.Model):
     sale_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     currency = models.CharField(default='bdt', max_length=3)
     is_on_sale = models.BooleanField(default=False)
-    
+    stock = models.IntegerField(default=0)  # NEW FIELD
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

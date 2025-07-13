@@ -1,0 +1,35 @@
+{% extends 'store_admin/base.html' %}
+{% block title %}Customers - Store Admin{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-6">Customers</h1>
+<div class="bg-white rounded shadow overflow-x-auto">
+    <table class="min-w-full">
+        <thead>
+            <tr class="bg-gray-100">
+                <th class="py-2 px-4 text-left">ID</th>
+                <th class="py-2 px-4 text-left">Email</th>
+                <th class="py-2 px-4 text-left">Name</th>
+                <th class="py-2 px-4 text-left">Phone</th>
+                <th class="py-2 px-4 text-left">Created</th>
+                <th class="py-2 px-4 text-left">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for customer in customers %}
+                <tr>
+                    <td class="py-2 px-4">{{ customer.id }}</td>
+                    <td class="py-2 px-4">{{ customer.email }}</td>
+                    <td class="py-2 px-4">{{ customer.first_name }} {{ customer.last_name }}</td>
+                    <td class="py-2 px-4">{{ customer.phone|default:'-' }}</td>
+                    <td class="py-2 px-4">{{ customer.created_at|date:'Y-m-d H:i' }}</td>
+                    <td class="py-2 px-4">
+                        <a href="{% url 'store_admin:customer_detail' customer.id %}" class="text-blue-600 hover:underline">View</a>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="6" class="py-4 text-center text-gray-400">No customers found.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %} 

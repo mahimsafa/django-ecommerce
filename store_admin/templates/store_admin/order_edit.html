@@ -1,0 +1,114 @@
+{% extends 'store_admin/base.html' %}
+{% block title %}Order #{{ order.id }} - Store Admin{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-6">Order #{{ order.id }}</h1>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+    <div class="bg-white p-6 rounded shadow">
+        <h2 class="text-lg font-semibold mb-4">Order Details</h2>
+        <dl class="mb-4">
+            <dt class="font-semibold">Order ID:</dt>
+            <dd class="mb-2">#{{ order.id }}</dd>
+            <dt class="font-semibold">Status:</dt>
+            <dd class="mb-2">
+                <form method="post" class="inline">
+                    {% csrf_token %}
+                    <select name="status" class="border rounded px-3 py-2">
+                        {% for value, label in order.STATUS_CHOICES %}
+                            <option value="{{ value }}" {% if order.status == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="ml-2 bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">Save</button>
+                </form>
+            </dd>
+            <dt class="font-semibold">Payment Status:</dt>
+            <dd class="mb-2">{{ order.get_payment_status_display }}</dd>
+            <dt class="font-semibold">Payment Method:</dt>
+            <dd class="mb-2">{{ order.payment_method|default:'-' }}</dd>
+            <dt class="font-semibold">Placed At:</dt>
+            <dd class="mb-2">{{ order.placed_at|date:"Y-m-d H:i" }}</dd>
+            <dt class="font-semibold">Updated At:</dt>
+            <dd class="mb-2">{{ order.updated_at|date:"Y-m-d H:i" }}</dd>
+            <dt class="font-semibold">Cancelled At:</dt>
+            <dd class="mb-2">{{ order.cancelled_at|date:"Y-m-d H:i" }}</dd>
+            <dt class="font-semibold">Cancelled By:</dt>
+            <dd class="mb-2">{{ order.cancelled_by|default:'-' }}</dd>
+        </dl>
+        <h2 class="text-lg font-semibold mb-4">Customer</h2>
+        <dl class="mb-4">
+            <dt class="font-semibold">Email:</dt>
+            <dd class="mb-2">{{ order.customer_email|default:order.customer }}</dd>
+            <dt class="font-semibold">Phone:</dt>
+            <dd class="mb-2">{{ order.customer_phone|default:'-' }}</dd>
+        </dl>
+        <h2 class="text-lg font-semibold mb-4">Addresses</h2>
+        <dl class="mb-4">
+            <dt class="font-semibold">Shipping Address:</dt>
+            <dd class="mb-2">
+                {% if order.shipping_address %}
+                    {{ order.shipping_address.full_name }}<br>
+                    {{ order.shipping_address.street_address_1 }}<br>
+                    {% if order.shipping_address.street_address_2 %}{{ order.shipping_address.street_address_2 }}<br>{% endif %}
+                    {{ order.shipping_address.city }}, {{ order.shipping_address.state }} {{ order.shipping_address.postal_code }}<br>
+                    {{ order.shipping_address.get_country_display }}<br>
+                    {% if order.shipping_address.phone %}{{ order.shipping_address.phone }}{% endif %}
+                {% else %}-{% endif %}
+            </dd>
+            <dt class="font-semibold">Billing Address:</dt>
+            <dd class="mb-2">
+                {% if order.billing_address %}
+                    {{ order.billing_address.full_name }}<br>
+                    {{ order.billing_address.street_address_1 }}<br>
+                    {% if order.billing_address.street_address_2 %}{{ order.billing_address.street_address_2 }}<br>{% endif %}
+                    {{ order.billing_address.city }}, {{ order.billing_address.state }} {{ order.billing_address.postal_code }}<br>
+                    {{ order.billing_address.get_country_display }}<br>
+                    {% if order.billing_address.phone %}{{ order.billing_address.phone }}{% endif %}
+                {% else %}-{% endif %}
+            </dd>
+        </dl>
+        <h2 class="text-lg font-semibold mb-4">Order Notes</h2>
+        <div class="mb-2">{{ order.notes|default:'-' }}</div>
+    </div>
+    <div class="bg-white p-6 rounded shadow">
+        <h2 class="text-lg font-semibold mb-4">Order Items</h2>
+        <table class="min-w-full mb-4">
+            <thead>
+                <tr class="bg-gray-100">
+                    <th class="py-2 px-4 text-left">Product</th>
+                    <th class="py-2 px-4 text-left">Variant</th>
+                    <th class="py-2 px-4 text-left">SKU</th>
+                    <th class="py-2 px-4 text-left">Unit Price</th>
+                    <th class="py-2 px-4 text-left">Qty</th>
+                    <th class="py-2 px-4 text-left">Line Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                    <tr>
+                        <td class="py-2 px-4">{{ item.variant.product.name }}</td>
+                        <td class="py-2 px-4">{{ item.variant.name }}</td>
+                        <td class="py-2 px-4">{{ item.variant.sku }}</td>
+                        <td class="py-2 px-4">${{ item.unit_price|floatformat:2 }}</td>
+                        <td class="py-2 px-4">{{ item.quantity }}</td>
+                        <td class="py-2 px-4">${{ item.line_total|floatformat:2 }}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="6" class="py-4 text-center text-gray-400">No items.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <h2 class="text-lg font-semibold mb-4">Order Totals</h2>
+        <dl>
+            <dt class="font-semibold">Subtotal:</dt>
+            <dd class="mb-2">${{ order.subtotal|floatformat:2 }}</dd>
+            <dt class="font-semibold">Tax:</dt>
+            <dd class="mb-2">${{ order.tax|floatformat:2 }}</dd>
+            <dt class="font-semibold">Shipping:</dt>
+            <dd class="mb-2">${{ order.shipping_cost|floatformat:2 }}</dd>
+            <dt class="font-semibold">Discount:</dt>
+            <dd class="mb-2">${{ order.discount_total|floatformat:2 }}</dd>
+            <dt class="font-semibold">Total:</dt>
+            <dd class="mb-2">${{ order.total|floatformat:2 }}</dd>
+        </dl>
+    </div>
+</div>
+{% endblock %} 

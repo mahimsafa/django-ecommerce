@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Store Admin{% endblock %}</title>
+    <!-- Tailwind CSS 4 CDN -->
+    <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="flex min-h-screen">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-white shadow-md hidden md:block">
+            <div class="p-6 font-bold text-xl border-b">Store Admin</div>
+            <nav class="mt-6">
+                <ul>
+                    <li><a href="{% url 'store_admin:dashboard' %}" class="block py-2 px-6 hover:bg-gray-200">Dashboard</a></li>
+                    <li><a href="{% url 'store_admin:product_list' %}" class="block py-2 px-6 hover:bg-gray-200">Products</a></li>
+                    <li><a href="{% url 'store_admin:order_list' %}" class="block py-2 px-6 hover:bg-gray-200">Orders</a></li>
+                </ul>
+            </nav>
+        </aside>
+        <!-- Main Content -->
+        <main class="flex-1 p-6">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    {% block extra_js %}{% endblock %}
+</body>
+</html> 

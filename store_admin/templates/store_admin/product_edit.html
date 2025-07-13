@@ -1,0 +1,214 @@
+{% extends 'store_admin/base.html' %}
+{% block title %}{% if product_id %}Edit Product{% else %}Add Product{% endif %} - Store Admin{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-6">{% if product_id %}Edit Product{% else %}Add Product{% endif %}</h1>
+<form class="bg-white p-6 rounded shadow w-full max-w-5xl mx-auto" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="mb-4">
+        <label class="block mb-1 font-semibold">Name</label>
+        <input type="text" name="name" class="w-full border rounded px-3 py-2" required value="{{ product.name|default:'' }}">
+    </div>
+    <div class="mb-4">
+        <label class="block mb-1 font-semibold">Slug</label>
+        <input type="text" name="slug" class="w-full border rounded px-3 py-2" required value="{{ product.slug|default:'' }}">
+    </div>
+    <div class="mb-4">
+        <label class="block mb-1 font-semibold">Description</label>
+        <textarea name="description" class="w-full border rounded px-3 py-2">{{ product.description|default:'' }}</textarea>
+    </div>
+    <div class="mb-4">
+        <label class="block mb-1 font-semibold">Status</label>
+        <select name="status" class="w-full border rounded px-3 py-2">
+            <option value="published" {% if product.status == 'published' %}selected{% endif %}>Published</option>
+            <option value="draft" {% if product.status == 'draft' %}selected{% endif %}>Draft</option>
+            <option value="inactive" {% if product.status == 'inactive' %}selected{% endif %}>Inactive</option>
+        </select>
+    </div>
+    <div class="mb-4">
+        <label class="block mb-1 font-semibold">Category</label>
+        <select name="category" class="w-full border rounded px-3 py-2">
+            <option value="">---</option>
+            {% for cat in categories %}
+                <option value="{{ cat.id }}" {% if product.category and product.category.id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="mb-4 grid grid-cols-2 gap-4">
+        <div>
+            <label class="block mb-1 font-semibold">Created At</label>
+            <input type="text" class="w-full border rounded px-3 py-2 bg-gray-100" value="{{ product.created_at|date:'Y-m-d H:i' }}" readonly>
+        </div>
+        <div>
+            <label class="block mb-1 font-semibold">Updated At</label>
+            <input type="text" class="w-full border rounded px-3 py-2 bg-gray-100" value="{{ product.updated_at|date:'Y-m-d H:i' }}" readonly>
+        </div>
+    </div>
+    <div class="flex gap-4 mt-6">
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Save</button>
+        <a href="{% url 'store_admin:product_list' %}" class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">Cancel</a>
+    </div>
+</form>
+
+<!-- VARIANTS SECTION -->
+<section class="bg-white p-6 rounded shadow w-full max-w-5xl mx-auto mt-8">
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-semibold">Variants</h2>
+        <button type="button" id="open-variant-modal" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Add Variants</button>
+    </div>
+    <form method="post" action="" class="space-y-2">
+        {% csrf_token %}
+        <input type="hidden" name="variant_form" value="1">
+        <table class="min-w-full mb-4">
+            <thead>
+                <tr class="bg-gray-100">
+                    <th class="py-2 px-4 text-left">Name</th>
+                    <th class="py-2 px-4 text-left">SKU</th>
+                    <th class="py-2 px-4 text-left">Default Price</th>
+                    <th class="py-2 px-4 text-left">Sale Price</th>
+                    <th class="py-2 px-4 text-left">Stock</th>
+                    <th class="py-2 px-4 text-left">On Sale</th>
+                    <th class="py-2 px-4 text-left">Delete</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for variant in variants %}
+                <tr>
+                    <td class="py-2 px-2"><input type="text" name="variant_name_{{ variant.id }}" value="{{ variant.name }}" class="border rounded px-2 py-1 w-full"></td>
+                    <td class="py-2 px-2"><input type="text" name="variant_sku_{{ variant.id }}" value="{{ variant.sku }}" class="border rounded px-2 py-1 w-full"></td>
+                    <td class="py-2 px-2"><input type="number" step="0.01" name="variant_default_price_{{ variant.id }}" value="{{ variant.default_price }}" class="border rounded px-2 py-1 w-full"></td>
+                    <td class="py-2 px-2"><input type="number" step="0.01" name="variant_sale_price_{{ variant.id }}" value="{{ variant.sale_price }}" class="border rounded px-2 py-1 w-full"></td>
+                    <td class="py-2 px-2"><input type="number" name="variant_stock_{{ variant.id }}" value="{{ variant.stock }}" class="border rounded px-2 py-1 w-full"></td>
+                    <td class="py-2 px-2 text-center"><input type="checkbox" name="variant_is_on_sale_{{ variant.id }}" {% if variant.is_on_sale %}checked{% endif %}></td>
+                    <td class="py-2 px-2 text-center"><input type="checkbox" name="variant_delete_{{ variant.id }}"></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Save Variants</button>
+    </form>
+</section>
+
+<!-- VARIANT MODAL -->
+<div id="variant-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 hidden">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-2xl p-6 relative">
+        <button id="close-variant-modal" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800">&times;</button>
+        <h3 class="text-lg font-semibold mb-4">Add Multiple Variants</h3>
+        <form method="post" action="" id="variant-modal-form">
+            {% csrf_token %}
+            <input type="hidden" name="variant_modal_form" value="1">
+            <div id="variant-modal-rows" class="space-y-2">
+                <!-- JS will add rows here -->
+            </div>
+            <button type="button" id="add-variant-row" class="bg-gray-200 px-3 py-1 rounded">+ Add Row</button>
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 ml-2">Add Variants</button>
+        </form>
+    </div>
+</div>
+
+<!-- IMAGES SECTION -->
+<section class="bg-white p-6 rounded shadow w-full max-w-5xl mx-auto mt-8">
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-semibold">Images</h2>
+        <button type="button" id="open-image-modal" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Upload Images</button>
+    </div>
+    {% if images %}
+        <div class="flex flex-wrap gap-4">
+            {% for image in images %}
+                <div class="relative group">
+                    <img src="{{ image.image.url }}" alt="{{ image.alt_text }}" class="w-32 h-32 object-cover rounded mb-2">
+                    <form method="post" action="" class="absolute top-1 right-1">
+                        {% csrf_token %}
+                        <input type="hidden" name="delete_image_id" value="{{ image.id }}">
+                        <button type="submit" class="bg-red-600 text-white text-xs px-2 py-1 rounded opacity-80 group-hover:opacity-100">Delete</button>
+                    </form>
+                    <div class="text-sm text-gray-600">{{ image.alt_text }}</div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-gray-400">No images.</div>
+    {% endif %}
+</section>
+
+<!-- IMAGE MODAL -->
+<div id="image-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 hidden">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-2xl p-6 relative">
+        <button id="close-image-modal" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800">&times;</button>
+        <h3 class="text-lg font-semibold mb-4">Upload Images</h3>
+        <form method="post" enctype="multipart/form-data" id="image-modal-form">
+            {% csrf_token %}
+            <input type="hidden" name="image_modal_form" value="1">
+            <input type="file" name="new_images" id="new-images-input" accept="image/*" multiple class="block mb-2">
+            <input type="text" name="new_images_alt" class="border rounded px-2 py-1 mb-2 w-full" placeholder="Alt text for all (optional)">
+            <div id="images-preview" class="flex flex-wrap gap-4 mb-2"></div>
+            <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Upload</button>
+        </form>
+    </div>
+</div>
+
+<script>
+// Modal logic for variants
+const openVariantModal = document.getElementById('open-variant-modal');
+const closeVariantModal = document.getElementById('close-variant-modal');
+const variantModal = document.getElementById('variant-modal');
+const variantRows = document.getElementById('variant-modal-rows');
+const addVariantRow = document.getElementById('add-variant-row');
+
+function createVariantRow(idx) {
+    return `<div class="flex gap-2 items-center">
+        <input type="text" name="modal_variant_name_${idx}" class="border rounded px-2 py-1 w-32" placeholder="Name">
+        <input type="text" name="modal_variant_sku_${idx}" class="border rounded px-2 py-1 w-24" placeholder="SKU">
+        <input type="number" step="0.01" name="modal_variant_default_price_${idx}" class="border rounded px-2 py-1 w-24" placeholder="0.00">
+        <input type="number" step="0.01" name="modal_variant_sale_price_${idx}" class="border rounded px-2 py-1 w-24" placeholder="Sale price">
+        <input type="number" name="modal_variant_stock_${idx}" class="border rounded px-2 py-1 w-20" placeholder="Stock">
+        <label class="flex items-center gap-1"><input type="checkbox" name="modal_variant_is_on_sale_${idx}"> On Sale</label>
+        <button type="button" class="remove-variant-row text-red-600">&times;</button>
+    </div>`;
+}
+let variantIdx = 0;
+openVariantModal.onclick = () => {
+    variantModal.classList.remove('hidden');
+    variantRows.innerHTML = createVariantRow(variantIdx);
+    variantIdx = 1;
+};
+closeVariantModal.onclick = () => variantModal.classList.add('hidden');
+addVariantRow.onclick = function() {
+    variantRows.insertAdjacentHTML('beforeend', createVariantRow(variantIdx++));
+};
+variantRows.addEventListener('click', function(e) {
+    if (e.target.classList.contains('remove-variant-row')) {
+        e.target.parentElement.remove();
+    }
+});
+
+// Modal logic for images
+const openImageModal = document.getElementById('open-image-modal');
+const closeImageModal = document.getElementById('close-image-modal');
+const imageModal = document.getElementById('image-modal');
+const imagesInput = document.getElementById('new-images-input');
+const imagesPreview = document.getElementById('images-preview');
+openImageModal.onclick = () => {
+    imageModal.classList.remove('hidden');
+    imagesPreview.innerHTML = '';
+    imagesInput.value = '';
+};
+closeImageModal.onclick = () => imageModal.classList.add('hidden');
+if (imagesInput) {
+    imagesInput.addEventListener('change', function(e) {
+        imagesPreview.innerHTML = '';
+        if (this.files) {
+            Array.from(this.files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    const img = document.createElement('img');
+                    img.src = ev.target.result;
+                    img.className = 'w-24 h-24 object-cover rounded border mb-2';
+                    imagesPreview.appendChild(img);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+    });
+}
+</script>
+{% endblock %} 

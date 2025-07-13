@@ -1,0 +1,47 @@
+{% extends 'store_admin/base.html' %}
+{% block title %}Customer #{{ customer.id }} - Store Admin{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-6">Customer Details</h1>
+<div class="bg-white p-6 rounded shadow max-w-2xl mb-8">
+    <h2 class="text-lg font-semibold mb-4">Customer Info</h2>
+    <dl class="mb-4">
+        <dt class="font-semibold">ID:</dt>
+        <dd class="mb-2">{{ customer.id }}</dd>
+        <dt class="font-semibold">Email:</dt>
+        <dd class="mb-2">{{ customer.email }}</dd>
+        <dt class="font-semibold">Name:</dt>
+        <dd class="mb-2">{{ customer.first_name }} {{ customer.last_name }}</dd>
+        <dt class="font-semibold">Phone:</dt>
+        <dd class="mb-2">{{ customer.phone|default:'-' }}</dd>
+        <dt class="font-semibold">Created At:</dt>
+        <dd class="mb-2">{{ customer.created_at|date:'Y-m-d H:i' }}</dd>
+        <dt class="font-semibold">Updated At:</dt>
+        <dd class="mb-2">{{ customer.updated_at|date:'Y-m-d H:i' }}</dd>
+    </dl>
+</div>
+<div class="bg-white p-6 rounded shadow">
+    <h2 class="text-lg font-semibold mb-4">Orders</h2>
+    <table class="min-w-full mb-4">
+        <thead>
+            <tr class="bg-gray-100">
+                <th class="py-2 px-4 text-left">Order ID</th>
+                <th class="py-2 px-4 text-left">Total</th>
+                <th class="py-2 px-4 text-left">Status</th>
+                <th class="py-2 px-4 text-left">Placed At</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+                <tr>
+                    <td class="py-2 px-4">{{ order.id }}</td>
+                    <td class="py-2 px-4">${{ order.total }}</td>
+                    <td class="py-2 px-4">{{ order.get_status_display }}</td>
+                    <td class="py-2 px-4">{{ order.placed_at|date:'Y-m-d H:i' }}</td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="4" class="py-4 text-center text-gray-400">No orders found.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %} 
