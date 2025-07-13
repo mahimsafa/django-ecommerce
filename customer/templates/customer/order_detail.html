@@ -1,6 +1,9 @@
 {% extends 'customer/base.html' %}
 
 {% block customer_content %}
+
+
+
 <div class="card">
     <div class="card-header bg-light d-flex justify-content-between align-items-center">
         <h4 class="mb-0">Order #{{ order.id }}</h4>
@@ -20,7 +23,7 @@
                     <div class="card-body">
                         <p class="mb-1">
                             <strong>Order Status:</strong> 
-                            <span class="badge bg-{{ order.get_status_display|lower }}">
+                            <span class="badge" id="order_status">
                                 {{ order.get_status_display }}
                             </span>
                         </p>
@@ -208,4 +211,19 @@
         </div>
     </div>
 </div>
+
+<script>
+    const order_status = "{{ order.get_status_display }}";
+    console.log(order_status);
+    const orderStatusElement = document.getElementById("order_status");
+    if (order_status === "Pending") {
+        orderStatusElement.classList.add("bg-warning");
+    } else if (order_status === "Processing") {
+        orderStatusElement.classList.add("bg-primary");
+    } else if (order_status === "Completed") {
+        orderStatusElement.classList.add("bg-success");
+    } else if (order_status === "Cancelled") {
+        orderStatusElement.classList.add("bg-danger");
+    }
+</script>
 {% endblock %}
