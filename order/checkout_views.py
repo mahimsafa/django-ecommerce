@@ -52,7 +52,7 @@ def checkout_view(request):
             'shipping': cart.get_shipping_for_store(store),
             'total': cart.get_total_for_store(store)
         }
-    
+
     context = {
         'cart': cart,
         'items_by_store': items_by_store,
@@ -114,11 +114,12 @@ def process_checkout(request):
             shipping_cost=0
             total = cart.get_grand_total()
             
-            # Create the order with the user object instead of customer
-            print('order creating')
+            # Create the order with the user object and contact info
             order = Order.objects.create(
                 store=store,
-                customer=request.user,  # Use the user object instead of customer
+                customer=request.user if request.user.is_authenticated else None,
+                customer_email=email,
+                customer_phone=phone,
                 shipping_address=shipping_address,
                 billing_address=billing_address,
                 status='pending',
@@ -128,10 +129,8 @@ def process_checkout(request):
                 shipping_cost=shipping_cost,
                 total=total,
             )
-            print('order created')
             # Create order items from cart items
             for item in cart.items.all():
-                print('Current item: ', item)
                 # Create or get order product
                 product, _ = OrderProduct.objects.get_or_create(
                     store=store,
@@ -141,7 +140,6 @@ def process_checkout(request):
                         'description': item.variant.product.description,
                     }
                 )
-                print('product created')
                 
                 # Check if variant already exists
                 variant, created = OrderProductVariant.objects.get_or_create(
@@ -162,17 +160,12 @@ def process_checkout(request):
                 )
                 
                 # Create order item
-                try:
-                    OrderItem.objects.create(
-                        order=order,
-                        variant=variant,
-                        quantity=item.quantity,
-                        unit_price=item.unit_price,
-                    )
-                except Exception as e:
-                    print(f"Error creating order item: {str(e)}")
-                print('order item created')
-            
+                OrderItem.objects.create(
+                    order=order,
+                    variant=variant,
+                    quantity=item.quantity,
+                    unit_price=item.unit_price,
+                )
             # Clear the cart
             cart.items.all().delete()
             cart.updated_at = timezone.now()

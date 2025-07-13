@@ -32,6 +32,18 @@ class Order(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
         related_name='orders',
+        null=True,
+        blank=True,
+        help_text='User who placed the order (null for guest checkouts)'
+    )
+    customer_email = models.EmailField(
+        help_text='Customer email address for order notifications'
+    )
+    customer_phone = models.CharField(
+        max_length=20,
+        help_text='Customer phone number for order updates',
+        blank=True,
+        null=True
     )
     status = models.CharField(
         max_length=20,

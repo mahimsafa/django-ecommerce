@@ -10,6 +10,27 @@
         <div class="col-md-8">
             <h2 class="mb-4">Checkout</h2>
             
+            <!-- Contact Information -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Contact Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email address</label>
+                        <input type="email" class="form-control" id="email" name="email" 
+                               value="{{ request.user.email|default:'' }}" required>
+                        <div class="form-text">We'll send order confirmation to this email.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="phone" class="form-label">Phone number</label>
+                        <input type="tel" class="form-control" id="phone" name="phone" 
+                               value="{{ customer.phone|default:'' }}" required>
+                        <div class="form-text">We'll contact you if there are any issues with your order.</div>
+                    </div>
+                </div>
+            </div>
+            
             <!-- Shipping Address -->
             <div class="card mb-4">
                 <div class="card-header">
