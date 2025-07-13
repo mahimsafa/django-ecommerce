@@ -24,6 +24,7 @@ from store_front.views_auth import register, logout
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('manage/', admin.site.urls),
     path('', include('store_front.urls')),
     path('cart/', include('cart.urls', namespace='cart')),
     path('orders/', include('order.urls', namespace='order')),  # Order management
