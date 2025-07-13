@@ -1,8 +1,27 @@
-import random
+"""
+Django Management Command: Seed Database with Sample Data
+
+This command populates the database with initial data for development and testing purposes.
+It creates:
+- A superuser (if none exists)
+- Sample categories
+- Two stores (Tech Haven and Fashion Forward)
+- 12 products per store with variants and pricing
+
+Usage:
+    python manage.py seed_data
+
+Requirements:
+    - Faker package (pip install Faker)
+    - All required Django apps must be in INSTALLED_APPS
+
+Note: This command is idempotent - it can be run multiple times without creating duplicates.
+"""
+
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
-from store.models import Store, StoreStaff, Config, Settings
-from product.models import Category, Product, Variant, Image
+from store.models import Store, Config, Settings
+from product.models import Category, Product, Variant
 from faker import Faker
 from decimal import Decimal
 from django.utils.text import slugify
@@ -10,9 +29,32 @@ from django.utils.text import slugify
 User = get_user_model()
 
 class Command(BaseCommand):
+    """
+    Management command to seed the database with initial data.
+    
+    This command performs the following actions:
+    1. Creates a superuser if none exists
+    2. Creates or uses existing categories
+    3. Creates two stores (Tech Haven and Fashion Forward)
+    4. Populates each store with 12 sample products
+    5. Creates variants and pricing for each product
+    
+    The command is safe to run multiple times as it checks for existing data
+    before creating new entries.
+    """
     help = 'Seed database with sample data for stores, categories, and products'
 
     def handle(self, *args, **options):
+        """
+        Entry point for the management command.
+        
+        Args:
+            *args: Variable length argument list
+            **options: Arbitrary keyword arguments
+            
+        Returns:
+            None
+        """
         self.stdout.write('Seeding data...')
         
         # Create superuser if not exists
@@ -20,8 +62,8 @@ class Command(BaseCommand):
             self.stdout.write('Creating superuser...')
             user = User.objects.create_superuser(
                 username='admin',
-                email='admin@example.com',
-                password='admin123',
+                email='admin@mahimsafa.com',
+                password='admin',
                 first_name='Store',
                 last_name='Admin'
             )
