@@ -33,15 +33,37 @@
                         
                         {% if order.can_cancel %}
                             <div class="mt-3">
-                                <form method="post" action="{% url 'order:cancel_order' order.id %}" class="d-inline">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-sm btn-outline-danger" 
-                                            onclick="return confirm('Are you sure you want to cancel this order?')">
-                                        <i class="fas fa-times me-1"></i> Cancel Order
-                                    </button>
-                                </form>
+                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                        data-bs-toggle="modal" data-bs-target="#cancelOrderModal">
+                                    <i class="fas fa-times me-1"></i> Cancel Order
+                                </button>
                             </div>
                         {% endif %}
+                        
+                        <!-- Cancel Order Modal -->
+                        <div class="modal fade" id="cancelOrderModal" tabindex="-1" aria-labelledby="cancelOrderModalLabel" aria-hidden="true">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="cancelOrderModalLabel">Confirm Order Cancellation</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p>Are you sure you want to cancel this order? This action cannot be undone.</p>
+                                        <p class="text-danger"><strong>Note:</strong> If your order has already been processed, you may not be able to cancel it.</p>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Go Back</button>
+                                        <form method="post" action="{% url 'customer:cancel_order' order.id %}" class="d-inline">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-danger">
+                                                <i class="fas fa-times me-1"></i> Yes, Cancel Order
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -213,8 +235,8 @@
 </div>
 
 <script>
+    // Update order status badge color
     const order_status = "{{ order.get_status_display }}";
-    console.log(order_status);
     const orderStatusElement = document.getElementById("order_status");
     if (order_status === "Pending") {
         orderStatusElement.classList.add("bg-warning");
@@ -224,6 +246,25 @@
         orderStatusElement.classList.add("bg-success");
     } else if (order_status === "Cancelled") {
         orderStatusElement.classList.add("bg-danger");
+        // Hide cancel button if order is already cancelled
+        const cancelButton = document.querySelector('[data-bs-target="#cancelOrderModal"]');
+        if (cancelButton) {
+            cancelButton.closest('.mt-3').style.display = 'none';
+        }
     }
+    
+    // Handle form submission with loading state
+    document.addEventListener('DOMContentLoaded', function() {
+        const cancelForm = document.querySelector('form[action*="cancel_order"]');
+        if (cancelForm) {
+            cancelForm.addEventListener('submit', function(e) {
+                const submitButton = this.querySelector('button[type="submit"]');
+                if (submitButton) {
+                    submitButton.disabled = true;
+                    submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Cancelling...';
+                }
+            });
+        }
+    });
 </script>
 {% endblock %}

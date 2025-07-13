@@ -15,9 +15,10 @@ urlpatterns = [
     path('addresses/<int:pk>/delete/', views.AddressDeleteView.as_view(), name='address_delete'),
     path('addresses/<int:pk>/set-default/<str:address_type>/', views.set_default_address, name='set_default_address'),
     
-    # Order history
+    # Orders
     path('orders/', views.OrderHistoryView.as_view(), name='order_history'),
     path('orders/<int:pk>/', views.OrderDetailView.as_view(), name='order_detail'),
+    path('orders/<int:pk>/cancel/', views.cancel_order, name='cancel_order'),
     
     # Account settings
     path('settings/', views.AccountSettingsView.as_view(), name='account_settings'),

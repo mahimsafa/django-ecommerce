@@ -4,7 +4,7 @@ from django.views.generic import ListView, CreateView, UpdateView, DeleteView, D
 from django.urls import reverse_lazy
 from django.contrib import messages
 from django.http import JsonResponse
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_http_methods
 from django.utils.decorators import method_decorator
 from django.contrib.auth.mixins import LoginRequiredMixin
 
@@ -125,6 +125,25 @@ class OrderDetailView(LoginRequiredMixin, DetailView):
 
     def get_queryset(self):
         return Order.objects.filter(customer=self.request.user).select_related('store', 'shipping_address', 'billing_address')
+
+
+@require_http_methods(["POST"])
+@login_required
+def cancel_order(request, pk):
+    """Handle order cancellation"""
+    order = get_object_or_404(Order, pk=pk, customer=request.user)
+    
+    if not order.can_cancel():
+        messages.error(request, "This order cannot be cancelled.")
+        return redirect('customer:order_detail', pk=order.pk)
+    
+    success, message = order.cancel(user=request.user)
+    if success:
+        messages.success(request, message)
+    else:
+        messages.error(request, message)
+    
+    return redirect('customer:order_detail', pk=order.pk)
 
 
 class AccountSettingsView(LoginRequiredMixin, UpdateView):

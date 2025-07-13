@@ -38,6 +38,19 @@ class Order(models.Model):
         choices=STATUS_CHOICES,
         default='pending',
     )
+    cancelled_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the order was cancelled"
+    )
+    cancelled_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='cancelled_orders',
+        help_text="User who cancelled the order"
+    )
     subtotal = models.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -121,15 +134,15 @@ class Order(models.Model):
     
     def update_totals(self):
         """
-        Update order totals by recalculating from order items.
+        Update the order's subtotal and total based on its items.
         """
-        # Calculate subtotal from order items
+        # Calculate subtotal by summing up all line totals
         self.subtotal = sum(
             item.unit_price * item.quantity 
             for item in self.items.all()
         )
         
-        # Recalculate total
+        # Calculate total including tax, shipping, and discounts
         self.total = (
             self.subtotal + 
             (self.tax or 0) + 
@@ -137,10 +150,35 @@ class Order(models.Model):
             (self.discount_total or 0)
         )
         self.save(update_fields=['subtotal', 'total'])
-    
+        
     def can_cancel(self):
-        """Check if the order can be cancelled."""
+        """
+        Check if the order can be cancelled.
+        Orders can only be cancelled if they are in 'pending' or 'processing' status.
+        """
         return self.status in ['pending', 'processing']
+    
+    def cancel(self, user=None):
+        """
+        Cancel the order if possible.
+        Returns (success, message) tuple.
+        """
+        if not self.can_cancel():
+            return False, "This order cannot be cancelled."
+            
+        self.status = 'cancelled'
+        self.cancelled_at = timezone.now()
+        if user:
+            self.cancelled_by = user
+        self.save(update_fields=['status', 'cancelled_at', 'cancelled_by'])
+        
+        # Restore product stock if needed
+        for item in self.items.all():
+            if item.variant:
+                item.variant.stock += item.quantity
+                item.variant.save(update_fields=['stock'])
+        
+        return True, "Order has been cancelled successfully."
     
     def mark_as_paid(self, payment_method=None):
         """Mark the order as paid."""

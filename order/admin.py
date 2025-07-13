@@ -35,7 +35,7 @@ class OrderAdmin(admin.ModelAdmin):
     search_fields = ('id', 'customer__email', 'customer__first_name', 'customer__last_name')
     readonly_fields = (
         'placed_at', 'updated_at', 'get_customer', 'subtotal', 'tax', 
-        'discount_total', 'total', 'item_count'
+        'discount_total', 'total', 'item_count', 'cancelled_at', 'cancelled_by'
     )
     inlines = [OrderItemInline]
     date_hierarchy = 'placed_at'
@@ -49,9 +49,12 @@ class OrderAdmin(admin.ModelAdmin):
         ('Order Totals', {
             'fields': ('subtotal', 'tax', 'discount_total', 'total')
         }),
+        ('Order Addresses', {
+            'fields': ('shipping_address', 'billing_address')
+        }),
         ('Metadata', {
             'classes': ('collapse',),
-            'fields': ('placed_at', 'updated_at'),
+            'fields': ('placed_at', 'updated_at', 'cancelled_at', 'cancelled_by'),
         }),
     )
     
