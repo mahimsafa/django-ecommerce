@@ -56,7 +56,6 @@ INSTALLED_APPS = [
     'mptt',
 
     # Local apps
-    'user',
     'store',
     'product',
     'store_front',
