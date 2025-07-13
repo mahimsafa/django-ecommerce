@@ -65,7 +65,7 @@ The application includes a management command to populate the database with samp
 
 2. **Run the seed command**
    ```bash
-   python manage.py seed_data
+   python manage.py seed
    ```
 
 ### What Gets Created

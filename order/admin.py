@@ -13,13 +13,13 @@ class OrderItemInline(admin.TabularInline):
     
     def get_variant_link(self, obj):
         if obj.variant:
-            url = reverse('admin:product_variant_change', args=[obj.variant.id])
+            url = reverse('admin:product_productvariant_change', args=[obj.variant.id])
             return mark_safe(f'<a href="{url}">{obj.variant}</a>')
         return "-"
     get_variant_link.short_description = 'Variant'
     
     def get_line_total(self, obj):
-        return obj.get_line_total()
+        return obj.line_total
     get_line_total.short_description = 'Line Total'
     
     def has_add_permission(self, request, obj=None):
@@ -40,7 +40,7 @@ class OrderAdmin(admin.ModelAdmin):
     )
     inlines = [OrderItemInline]
     date_hierarchy = 'placed_at'
-    list_select_related = ('customer', 'store', 'customer__user')
+    list_select_related = ('customer', 'store', 'customer__tenant')
     actions = ['mark_as_processing', 'mark_as_completed', 'mark_as_cancelled']
     
     fieldsets = (
