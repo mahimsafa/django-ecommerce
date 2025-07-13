@@ -1,0 +1,108 @@
+{% if not store_items %}
+    <div class="text-center p-5">
+        <i class="fas fa-shopping-cart fa-4x text-muted mb-3"></i>
+        <h5>Your cart is empty</h5>
+        <p class="text-muted">Browse our products and add items to your cart</p>
+        <a href="{% url 'store_front:home' %}" class="btn btn-primary">
+            <i class="fas fa-arrow-left me-2"></i> Continue Shopping
+        </a>
+    </div>
+{% else %}
+    {% for store, items in store_items.items %}
+    <div class="card mb-4">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">{{ store.name }}</h5>
+            <span class="badge bg-primary">{{ items|length }} item{{ items|length|pluralize }}</span>
+        </div>
+        <div class="card-body p-0">
+            {% for item in items %}
+            <div class="p-3 {% if not forloop.last %}border-bottom{% endif %}">
+                <div class="d-flex">
+                    <div class="flex-shrink-0 me-3" style="width: 120px; height: 120px; overflow: hidden;">
+                        {% with item.variant.images.first as image %}
+                            {% if image %}
+                                <img src="{{ image.image.url }}" alt="{{ item.variant.product.name }}" class="img-fluid rounded" style="width: 100%; height: 100%; object-fit: cover;">
+                            {% else %}
+                                <div class="bg-light d-flex align-items-center justify-content-center rounded" style="width: 100%; height: 100%;">
+                                    <i class="fas fa-image fa-2x text-muted"></i>
+                                </div>
+                            {% endif %}
+                        {% endwith %}
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1">{{ item.variant.product.name }}</h6>
+                                <p class="mb-1 text-muted small">
+                                    {{ item.variant.get_variant_display }}
+                                    {% if item.variant.sku %}
+                                        <br>SKU: {{ item.variant.sku }}
+                                    {% endif %}
+                                </p>
+                                <div class="d-flex align-items-center mt-2">
+                                    <form action="{% url 'cart:update_cart_item' item.id %}" method="post" class="d-flex align-items-center me-3">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="update">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary quantity-decrease" data-item-id="{{ item.id }}">-</button>
+                                        <input type="number" name="quantity" value="{{ item.quantity }}" min="1" max="{{ item.variant.stock_quantity }}" class="form-control form-control-sm quantity-input mx-2" style="width: 60px; text-align: center;" data-item-id="{{ item.id }}">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary quantity-increase" data-item-id="{{ item.id }}">+</button>
+                                    </form>
+                                    <form action="{% url 'cart:update_cart_item' item.id %}" method="post" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="remove">
+                                        <button type="submit" class="btn btn-link text-danger p-0" style="font-size: 0.8rem;">
+                                            <i class="far fa-trash-alt me-1"></i> Remove
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <h6 class="mb-1">${{ item.unit_price|floatformat:2 }}</h6>
+                                <small class="text-muted">${{ item.get_subtotal|floatformat:2 }} total</small>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <div class="availability-badge badge {% if item.variant.stock_quantity > 5 %}bg-success{% else %}bg-warning text-dark{% endif %}">
+                                {% if item.variant.stock_quantity > 5 %}In Stock{% else %}Low Stock{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="card-footer bg-light">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="text-muted">Subtotal:</span>
+                    <span class="fw-bold">${{ cart.get_subtotal_for_store|floatformat:2 }}</span>
+                </div>
+                <div>
+                    <span class="text-muted">Shipping:</span>
+                    <span class="fw-bold">${{ cart.get_shipping_for_store|floatformat:2 }}</span>
+                </div>
+                <div>
+                    <span class="text-muted">Tax:</span>
+                    <span class="fw-bold">${{ cart.get_tax_for_store|floatformat:2 }}</span>
+                </div>
+                <div class="h5 mb-0">
+                    <span class="text-muted">Total:</span>
+                    <span class="text-primary">${{ cart.get_total_for_store|floatformat:2 }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    <div class="d-flex justify-content-between mb-4">
+        <a href="{% url 'store_front:home' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i> Continue Shopping
+        </a>
+        <form id="clear-cart-form" method="post" action="{% url 'cart:clear_cart' %}" style="display: inline-block;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-danger">
+                <i class="fas fa-trash me-2"></i> Clear Cart
+            </button>
+        </form>
+    </div>
+{% endif %}
