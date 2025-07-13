@@ -1,7 +1,9 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.forms import UserCreationForm
-from django.contrib.auth import login as auth_login
+from django.contrib.auth import login as auth_login, logout as auth_logout
 from django.contrib import messages
+from django.views.decorators.http import require_http_methods
+from django.contrib.auth.decorators import login_required
 
 def register(request):
     if request.method == 'POST':
@@ -15,3 +17,17 @@ def register(request):
         form = UserCreationForm()
     
     return render(request, 'registration/register.html', {'form': form})
+
+@require_http_methods(['GET', 'POST'])
+def logout(request):
+    """
+    Custom logout view that handles both GET and POST requests
+    and properly logs the user out.
+    """
+    if request.method == 'POST':
+        auth_logout(request)
+        messages.success(request, 'You have been successfully logged out.')
+        return redirect('store_front:home')
+    
+    # For GET requests, show a confirmation page
+    return render(request, 'registration/logout_confirm.html')
