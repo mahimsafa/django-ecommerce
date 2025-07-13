@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load humanize %}
 
 {% block title %}Shopping Cart - Django Commerce{% endblock %}
 
@@ -39,10 +40,29 @@
 {% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<!-- Confirmation Modal -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="modalTitle" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Remove Item</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                Are you sure you want to remove this item from your cart?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmRemoveBtn">Remove</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container mt-4 cart-container">
     <h1 class="mb-4">Your Shopping Cart</h1>
     
-    {% if cart and items.count > 0 %}
+    {% if cart and items|length > 0 %}
         <div class="row">
             <div class="col-md-8">
                 <div class="card mb-4">
@@ -51,7 +71,10 @@
                             <div class="row mb-4 cart-item" data-item-id="{{ item.id }}">
                                 <div class="col-md-3">
                                     {% if item.variant.product.images.first %}
-                                        <img src="{{ item.variant.product.images.first.image.url }}" class="img-fluid" alt="{{ item.variant.product.name }}">
+                                        <img src="{{ item.variant.product.images.first.image.url }}" 
+                                             class="img-fluid product-image" 
+                                             alt="{{ item.variant.product.name }}"
+                                             data-variant-id="{{ item.variant.id }}">
                                     {% else %}
                                         <div class="bg-light text-center p-5">
                                             <i class="fas fa-image fa-3x text-muted"></i>
@@ -67,20 +90,31 @@
                                     <p class="text-muted">${{ item.unit_price|floatformat:2 }} each</p>
                                     
                                     <div class="d-flex align-items-center mt-3">
-                                        <button type="button" class="btn btn-outline-danger btn-sm remove-item" data-item-id="{{ item.id }}">
+                                        <button type="button" 
+                                                class="btn btn-outline-danger btn-sm remove-item" 
+                                                data-item-id="{{ item.id }}"
+                                                data-variant-id="{{ item.variant.id }}">
                                             <i class="fas fa-trash me-1"></i> Remove
                                         </button>
                                     </div>
                                 </div>
                                 <div class="col-md-3 text-end">
                                     <div class="input-group mb-3" style="max-width: 120px;">
+                                        <button class="btn btn-outline-secondary btn-sm quantity-decrease" type="button" data-item-id="{{ item.id }}">-</button>
                                         <input type="number" 
                                                class="form-control text-center quantity-input" 
                                                value="{{ item.quantity }}" 
-                                               min="1" 
-                                               data-item-id="{{ item.id }}">
+                                               min="1"
+                                               max="{{ item.variant.stock_quantity|default:99 }}" 
+                                               data-item-id="{{ item.id }}"
+                                               data-variant-id="{{ item.variant.id }}"
+                                               aria-label="Quantity">
+                                        <button class="btn btn-outline-secondary btn-sm quantity-increase" type="button" data-item-id="{{ item.id }}">+</button>
                                     </div>
-                                    <h5 class="mt-2">${{ item.get_subtotal|floatformat:2 }}</h5>
+                                    <h5 class="mt-2 item-subtotal">${{ item.get_subtotal|floatformat:2 }}</h5>
+                                    <div class="availability-badge badge {% if item.variant.stock_quantity > 5 %}bg-success{% else %}bg-warning text-dark{% endif %}">
+                                        {% if item.variant.stock_quantity > 5 %}In Stock{% else %}Low Stock{% endif %}
+                                    </div>
                                 </div>
                             </div>
                             {% if not forloop.last %}<hr>{% endif %}
@@ -98,28 +132,38 @@
                 </div>
             </div>
             
+            <!-- Order Summary Card -->
             <div class="col-md-4">
                 <div class="card mb-4">
                     <div class="card-body">
-                        <h5 class="card-title">Order Summary</h5>
-                        <hr>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5>Order Summary</h5>
+                            <span class="badge bg-secondary">{{ cart.items.count }} item{% if cart.items.count != 1 %}s{% endif %}</span>
+                        </div>
                         <div class="d-flex justify-content-between mb-2">
-                            <span>Subtotal ({{ items.count }} items)</span>
-                            <span>${{ cart.get_total|floatformat:2 }}</span>
+                            <span>Subtotal</span>
+                            <span class="cart-subtotal">${{ cart.get_subtotal|floatformat:2 }}</span>
                         </div>
                         <div class="d-flex justify-content-between mb-2">
                             <span>Shipping</span>
-                            <span>Calculated at checkout</span>
+                            <span id="shipping-cost">{% if cart.get_shipping_cost %}${{ cart.get_shipping_cost|floatformat:2 }}{% else %}Calculated at checkout{% endif %}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Tax</span>
+                            <span id="tax-amount">{% if cart.get_tax %}${{ cart.get_tax|floatformat:2 }}{% else %}Calculated at checkout{% endif %}</span>
                         </div>
                         <hr>
-                        <div class="d-flex justify-content-between mb-3">
+                        <div class="d-flex justify-content-between mb-4">
                             <h5>Total</h5>
-                            <h5>${{ cart.get_total|floatformat:2 }}</h5>
+                            <h5 class="cart-total">${{ cart.get_total|floatformat:2 }}</h5>
                         </div>
+                        
                         {% if user.is_authenticated %}
-                            <a href="{% url 'checkout:checkout' %}" class="btn btn-primary w-100">
+                            <button class="btn btn-primary w-100" disabled 
+                                    data-bs-toggle="tooltip" 
+                                    title="Checkout functionality coming soon">
                                 Proceed to Checkout
-                            </a>
+                            </button>
                         {% else %}
                             <div class="d-grid gap-2">
                                 <a href="{% url 'login' %}?next={% url 'cart:view' %}" class="btn btn-primary">
@@ -138,14 +182,28 @@
                         {% endif %}
                     </div>
                 </div>
+                
+                <!-- Promo Code -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title mb-3">Have a Promo Code?</h5>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="promo-code" placeholder="Enter promo code">
+                            <button class="btn btn-outline-secondary" type="button" id="apply-promo">Apply</button>
+                        </div>
+                        <div id="promo-message" class="mt-2 small"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
     {% else %}
-    <div class="empty-cart">
-        <i class="fas fa-shopping-cart"></i>
-        <h3>Your cart is empty</h3>
-        <p class="text-muted">Looks like you haven't added anything to your cart yet.</p>
+    <div class="empty-cart text-center py-5">
+        <div class="mb-4">
+            <i class="fas fa-shopping-cart fa-4x text-muted mb-3"></i>
+            <h3>Your cart is empty</h3>
+            <p class="text-muted">Looks like you haven't added anything to your cart yet.</p>
+        </div>
         <a href="{% url 'store_front:home' %}" class="btn btn-primary">
             <i class="fas fa-arrow-left me-1"></i> Continue Shopping
         </a>
@@ -156,11 +214,93 @@
 
 {% block extra_js %}
 <script>
-    // Auto-submit forms when quantity changes
-    document.querySelectorAll('.quantity-input').forEach(input => {
-        input.addEventListener('change', function() {
-            this.form.submit();
+    // Initialize cart data safely
+    function getCartData() {
+        const cartId = '{{ cart.id|default:""|escapejs }}';
+        const cartTotal = parseFloat('{{ cart.get_total|default:0|stringformat:"f" }}') || 0;
+        
+        // Debug info - using separate variables to avoid template syntax in JavaScript
+        const debugCartId = cartId || 'none';
+        const debugHasCart = '{{ cart.id|yesno:"true,false" }}' === 'true';
+        const debugItemsCount = parseInt('{{ items|length|default:0 }}') || 0;
+        
+        if (window.console) {
+            console.log('Cart Data:', {
+                hasCart: debugHasCart,
+                itemsCount: debugItemsCount,
+                cartId: debugCartId,
+                cartTotal: cartTotal
+            });
+        }
+        
+        return {
+            csrfToken: '{{ csrf_token|escapejs }}',
+            cartId: cartId,
+            cartTotal: cartTotal
+        };
+    }
+    
+    // Store cart data in a scoped variable
+    const cartData = getCartData();
+    
+    // Initialize tooltips and event listeners when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Bootstrap tooltips
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.forEach(function(tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
         });
+        
+        // Initialize quantity controls
+        document.querySelectorAll('.quantity-increase').forEach(button => {
+            button.addEventListener('click', function() {
+                const input = this.closest('.input-group').querySelector('.quantity-input');
+                input.stepUp();
+                updateCartItem(input.dataset.itemId, input.value, input.dataset.variantId);
+            });
+        });
+
+        document.querySelectorAll('.quantity-decrease').forEach(button => {
+            button.addEventListener('click', function() {
+                const input = this.closest('.input-group').querySelector('.quantity-input');
+                if (input.value > 1) {
+                    input.stepDown();
+                    updateCartItem(input.dataset.itemId, input.value, input.dataset.variantId);
+                }
+            });
+        });
+
+        // Handle quantity input changes
+        document.querySelectorAll('.quantity-input').forEach(input => {
+            let debounceTimer;
+            input.addEventListener('change', function() {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    updateCartItem(this.dataset.itemId, this.value, this.dataset.variantId);
+                }, 500);
+            });
+        });
+
+        // Handle remove item clicks
+        document.querySelectorAll('.remove-item').forEach(button => {
+            button.addEventListener('click', function() {
+                const itemId = this.dataset.itemId;
+                const variantId = this.dataset.variantId;
+                if (confirm('Are you sure you want to remove this item from your cart?')) {
+                    removeCartItem(itemId, variantId);
+                }
+            });
+        });
+
+        // Handle clear cart
+        const clearCartBtn = document.getElementById('clear-cart');
+        if (clearCartBtn) {
+            clearCartBtn.addEventListener('click', function() {
+                if (confirm('Are you sure you want to clear your cart?')) {
+                    clearCart();
+                }
+            });
+        }
     });
 </script>
 {% endblock %}
