@@ -9,18 +9,20 @@ from product.models import Variant
 
 
 class CartManager(models.Manager):
-    def get_or_create_cart(self, request, store):
-        """Get or create a cart for the current session/user."""
+    def get_or_create_cart(self, request):
+        """
+        Get or create a cart for the current session/user.
+        Now handles items from multiple stores in a single cart.
+        """
         if not request.session.session_key:
             request.session.save()
             
         session_key = request.session.session_key
         
         if request.user.is_authenticated:
-            # For authenticated users, try to get their active cart first
+            # For authenticated users, get their active cart
             cart = self.filter(
                 user=request.user,
-                store=store,
                 is_active=True
             ).first()
             
@@ -28,7 +30,6 @@ class CartManager(models.Manager):
             if not cart:
                 session_cart = self.filter(
                     session_key=session_key,
-                    store=store,
                     is_active=True
                 ).first()
                 
@@ -42,21 +43,18 @@ class CartManager(models.Manager):
                     # Create new cart for the user
                     cart = self.create(
                         user=request.user,
-                        store=store,
                         is_active=True
                     )
         else:
             # For anonymous users, get or create cart with session key
             cart = self.filter(
                 session_key=session_key,
-                store=store,
                 is_active=True
             ).first()
             
             if not cart:
                 cart = self.create(
                     session_key=session_key,
-                    store=store,
                     is_active=True
                 )
         
@@ -74,39 +72,83 @@ class Cart(models.Model):
         on_delete=models.CASCADE
     )
     session_key = models.CharField(
-        max_length=40,
+        max_length=40, 
+        blank=True, 
         null=True,
-        blank=True,
         help_text='Session key for guest users',
         db_index=True
     )
-    store = models.ForeignKey(
-        Store,
-        related_name='carts',
-        on_delete=models.CASCADE
-    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(
         default=True,
         help_text='If false, this cart is archived after checkout or cancellation.'
     )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
     
     objects = CartManager()
 
-    class Meta:
-        unique_together = ('user', 'store', 'is_active')
-        ordering = ['-updated_at']
-
     def __str__(self):
-        user_display = f"user {self.user.username}" if self.user else "guest user"
-        return f"Cart {self.pk} for {user_display} @ {self.store.name if self.store else 'No Store'}"
+        if self.user:
+            return f"Cart for {self.user.username} (ID: {self.id})"
+        return f"Session cart {self.session_key} (ID: {self.id})"
 
-    def get_total(self):
-        """
-        Calculate total cost of all items in the cart.
-        """
-        return sum(item.get_subtotal() for item in self.items.all())
+    def get_stores(self):
+        """Get all unique stores in this cart"""
+        store_ids = self.items.values_list('variant__product__store', flat=True).distinct()
+        from store.models import Store
+        return Store.objects.filter(id__in=store_ids)
+
+    def get_items_by_store(self):
+        """Group cart items by store"""
+        from collections import defaultdict
+        store_items = defaultdict(list)
+        for item in self.items.select_related('variant__product__store').all():
+            store_items[item.variant.product.store].append(item)
+        return dict(store_items)
+
+    def get_subtotal_for_store(self, store):
+        """Get subtotal for items from a specific store"""
+        return sum(
+            item.get_subtotal()
+            for item in self.items.filter(variant__product__store=store)
+        )
+
+    def get_tax_for_store(self, store):
+        """Calculate tax for items from a specific store"""
+        subtotal = self.get_subtotal_for_store(store)
+        store.tax_rate = 0.5
+        # return subtotal * (store.tax_rate / 100) if store.tax_rate else 0
+        return subtotal * 1
+
+    def get_shipping_for_store(self, store):
+        """Get shipping cost for a specific store"""
+        # return store.shipping_cost or 0
+        return 0
+
+    def get_total_for_store(self, store):
+        """Get total for items from a specific store"""
+        subtotal = self.get_subtotal_for_store(store)
+        tax = self.get_tax_for_store(store)
+        shipping = self.get_shipping_for_store(store)
+        return subtotal + tax + shipping
+
+    def get_grand_total(self):
+        """Get grand total for all items in cart across all stores"""
+        return sum(
+            self.get_total_for_store(store)
+            for store in self.get_stores()
+        )
+
+    @property
+    def total_items(self):
+        return self.items.count()
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'session_key', 'is_active']),
+            models.Index(fields=['is_active']),
+        ]
 
 
 class CartItem(models.Model):

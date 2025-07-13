@@ -41,13 +41,24 @@ class CartItemInline(admin.TabularInline):
 
 @admin.register(Cart)
 class CartAdmin(admin.ModelAdmin):
-    list_display = ('id', 'get_user', 'store', 'item_count', 'get_total', 'created_at', 'is_active')
-    list_filter = ('is_active', 'store', 'created_at')
+    list_display = ('id', 'get_user', 'store_list', 'item_count', 'get_grand_total_display', 'created_at', 'is_active')
+    list_filter = ('is_active', 'created_at')
     search_fields = ('user__username', 'user__email', 'session_key', 'id')
-    readonly_fields = ('created_at', 'updated_at', 'get_user', 'get_total')
+    readonly_fields = ('created_at', 'updated_at', 'get_user', 'get_grand_total_display', 'store_list')
     inlines = [CartItemInline]
     date_hierarchy = 'created_at'
-    list_select_related = ('user', 'store')
+    list_select_related = ('user',)
+    
+    def store_list(self, obj):
+        stores = obj.get_stores()
+        if stores.exists():
+            return ", ".join([store.name for store in stores])
+        return "No stores"
+    store_list.short_description = 'Stores'
+    
+    def get_grand_total_display(self, obj):
+        return f"${obj.get_grand_total():.2f}" if obj.get_grand_total() is not None else "N/A"
+    get_grand_total_display.short_description = 'Grand Total'
     
     def get_queryset(self, request):
         return super().get_queryset(request).prefetch_related('items')
@@ -92,11 +103,18 @@ class CartItemForm(forms.ModelForm):
 @admin.register(CartItem)
 class CartItemAdmin(admin.ModelAdmin):
     form = CartItemForm
-    list_display = ('id', 'get_cart', 'get_variant', 'quantity', 'unit_price', 'get_subtotal')
-    list_filter = ('cart__store',)
+    list_display = ('id', 'get_cart', 'get_variant', 'get_store', 'quantity', 'unit_price', 'get_subtotal')
+    list_filter = ('variant__product__store',)
     search_fields = ('cart__id', 'variant__name', 'variant__sku')
-    readonly_fields = ('added_at', 'updated_at', 'get_subtotal')
-    list_select_related = ('cart', 'variant', 'cart__store')
+    readonly_fields = ('added_at', 'updated_at', 'get_subtotal', 'get_store')
+    list_select_related = ('cart', 'variant', 'variant__product__store')
+    
+    def get_store(self, obj):
+        if obj and obj.variant and obj.variant.product.store:
+            return obj.variant.product.store.name
+        return "-"
+    get_store.short_description = 'Store'
+    get_store.admin_order_field = 'variant__product__store__name'
     
     def get_form(self, request, obj=None, **kwargs):
         form = super().get_form(request, obj, **kwargs)

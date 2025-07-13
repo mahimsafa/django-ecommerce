@@ -18,11 +18,8 @@ def add_to_cart(request, variant_id):
         store = variant.product.store
         quantity = int(request.POST.get('quantity', 1))
         
-        # Store the current store ID in session for future requests
-        request.session['current_store_id'] = store.id
-        
         # Get or create cart for the user/session
-        cart = Cart.objects.get_or_create_cart(request, store)
+        cart = Cart.objects.get_or_create_cart(request)
         
         # Get or create cart item
         cart_item, created = CartItem.objects.get_or_create(
@@ -42,7 +39,7 @@ def add_to_cart(request, variant_id):
         cart.save()
         
         # Debug output
-        print(f"Added to cart - Product: {variant.product.name}, Qty: {quantity}, Cart ID: {cart.id}")
+        print(f"Added to cart - Product: {variant.product.name}, Store: {store.name}, Qty: {quantity}, Cart ID: {cart.id}")
         print(f"Current cart items: {cart.items.count()}")
         
         is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
@@ -51,23 +48,18 @@ def add_to_cart(request, variant_id):
             return JsonResponse({
                 'success': True,
                 'message': 'Item added to cart',
-                'cart_count': cart.items.count(),
-                'cart_total': str(cart.get_total())
+                'cart_count': cart.items.count()
             })
-        
-        messages.success(request, f'Added {variant.product.name} to your cart')
-        return redirect(request.META.get('HTTP_REFERER', 'store_front:home'))
+            
+        messages.success(request, f"Added {variant.product.name} to your cart.")
+        return redirect('cart:view')
         
     except Exception as e:
-        import traceback
-        print(f"Error in add_to_cart: {str(e)}")
-        print(traceback.format_exc())
-        
+        print(f"Error adding to cart: {str(e)}")
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({
-                'success': False,
-                'message': f'Error adding item to cart: {str(e)}'
-            }, status=400)
+            return JsonResponse({'success': False, 'error': str(e)}, status=400)
+        messages.error(request, f"Error adding item to cart: {str(e)}")
+        return redirect('store_front:home')
             
         messages.error(request, 'Error adding item to cart. Please try again.')
         return redirect(request.META.get('HTTP_REFERER', 'store_front:home'))
@@ -78,38 +70,9 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 def cart_count(request):
     try:
         count = 0
-        store_id = request.session.get('current_store_id')
-        
-        if not store_id:
-            # If no store in session, try to get the first store
-            store = Store.objects.first()
-            if store:
-                store_id = store.id
-                request.session['current_store_id'] = store_id
-        
-        if store_id:
-            if request.user.is_authenticated:
-                # For authenticated users, get their active cart
-                cart = Cart.objects.filter(
-                    user=request.user,
-                    store_id=store_id,
-                    is_active=True
-                ).first()
-                if cart:
-                    count = cart.items.count()
-            else:
-                # For anonymous users, use session key
-                if not request.session.session_key:
-                    request.session.save()  # Ensure session exists for guest users
-                else:
-                    cart = Cart.objects.filter(
-                        session_key=request.session.session_key,
-                        store_id=store_id,
-                        is_active=True
-                    ).first()
-                    if cart:
-                        count = cart.items.count()
-        
+        cart = Cart.objects.get_or_create_cart(request)
+        if cart:
+            count = cart.items.count()
         return JsonResponse({'count': count, 'status': 'success'})
     except Exception as e:
         import traceback
@@ -121,37 +84,30 @@ class CartView(View):
     
     def get(self, request, *args, **kwargs):
         try:
-            # Get store from session or use the first available store
-            store_id = request.session.get('current_store_id')
-            if store_id:
-                store = Store.objects.filter(id=store_id).first()
+            cart = Cart.objects.get_or_create_cart(request)
             
-            # If no store in session or not found, get the first store
-            if not store_id or not store:
-                store = Store.objects.first()
-                if store:
-                    request.session['current_store_id'] = store.id
-            
-            if not store:
-                messages.error(request, "No store available. Please try again later.")
-                return render(request, self.template_name, {'cart': None, 'items': []})
-            
-            # Get or create cart for the current user/session
-            cart = Cart.objects.get_or_create_cart(request, store)
-            
-            # Get items with product and variant details
-            items = cart.items.select_related('variant__product').all()
+            # Group items by store
+            store_items = cart.get_items_by_store()
             
             # Debug output
+            print("\n=== CART DEBUG ===")
             print(f"Cart ID: {cart.id}")
-            print(f"Items in cart: {items.count()}")
-            for item in items:
-                print(f"- {item.variant.product.name} (Qty: {item.quantity})")
+            print(f"Total items: {cart.items.count()}")
+            print(f"Stores in cart: {len(store_items)}")
+            for store, items in store_items.items():
+                print(f"- {store.name} (ID: {store.id}): {len(items)} items")
+                for item in items:
+                    print(f"  - {item.variant.product.name} (Qty: {item.quantity})")
+            print("==================\n")
+            
+            # Get all items for backward compatibility
+            all_items = cart.items.select_related('variant__product__store').all()
             
             context = {
                 'cart': cart,
-                'items': items,
-                'store': store
+                'items': all_items,  # For backward compatibility
+                'store_items': store_items,
+                'stores': store_items.keys()
             }
             return render(request, self.template_name, context)
             
@@ -160,7 +116,7 @@ class CartView(View):
             print(f"Error in CartView: {str(e)}")
             print(traceback.format_exc())
             messages.error(request, f"Error loading cart. Please try again.")
-            return render(request, self.template_name, {'cart': None, 'items': [], 'store': None})
+            return render(request, self.template_name, {'cart': None, 'store_items': {}})
 
 @require_http_methods(["POST"])
 def update_cart_item(request, item_id):
