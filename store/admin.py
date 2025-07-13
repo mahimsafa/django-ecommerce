@@ -32,15 +32,15 @@ class SettingsInline(admin.StackedInline):
 
 @admin.register(Store)
 class StoreAdmin(admin.ModelAdmin):
-    list_display = ('name', 'owner', 'tagline', 'is_active', 'created_at', 'updated_at')
-    list_filter = ('created_at', 'updated_at', 'settings__is_active')
+    list_display = ('name', 'owner', 'tagline', 'created_at', 'updated_at')
+    list_filter = ('created_at', 'updated_at')
     search_fields = ('name', 'tagline', 'description', 'owner__username')
     date_hierarchy = 'created_at'
     inlines = [ConfigInline, SettingsInline, StoreStaffInline]
     readonly_fields = ('created_at', 'updated_at', 'logo_preview', 'thumbnail_preview')
     fieldsets = (
         ('Store Information', {
-            'fields': ('name', 'tagline', 'description')
+            'fields': ('name', 'slug', 'tagline', 'description')
         }),
         ('Media', {
             'fields': ('logo', 'logo_preview', 'thumbnail', 'thumbnail_preview')

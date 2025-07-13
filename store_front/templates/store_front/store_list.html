@@ -1,0 +1,107 @@
+{% extends 'store_front/base.html' %}
+
+{% block title %}Stores - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Our Stores</h1>
+    
+    <!-- Search Form -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <form method="get" action="" class="form-inline">
+                <div class="input-group w-100">
+                    <input type="text" name="q" class="form-control" placeholder="Search stores..." value="{{ request.GET.q }}">
+                    <div class="input-group-append">
+                        <button class="btn btn-primary" type="submit">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Store List -->
+    {% if stores %}
+        <div class="row">
+            {% for store in stores %}
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100">
+                        {% if store.logo %}
+                            <img src="{{ store.logo.url }}" class="card-img-top" alt="{{ store.name }} logo" style="height: 200px; object-fit: contain; background-color: #f8f9fa;">
+                        {% else %}
+                            <div class="text-center py-5" style="height: 200px; background-color: #f8f9fa; display: flex; align-items: center; justify-content: center;">
+                                <i class="fas fa-store fa-4x text-muted"></i>
+                            </div>
+                        {% endif %}
+                        <div class="card-body">
+                            <h5 class="card-title">{{ store.name }}</h5>
+                            <p class="card-text text-muted">{{ store.tagline }}</p>
+                            <p class="card-text">{{ store.description|truncatewords:20 }}</p>
+                        </div>
+                        <div class="card-footer bg-transparent">
+                            <a href="{% url 'store_front:store_products' store_slug=store.slug %}" class="btn btn-outline-primary btn-block">
+                                Visit Store <i class="fas fa-arrow-right ml-2"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if forloop.counter|divisibleby:3 and not forloop.last %}
+                    </div><div class="row">
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" aria-label="First">
+                                <span aria-hidden="true">&laquo;&laquo;</span>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" aria-label="Previous">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" aria-label="Next">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" aria-label="Last">
+                                <span aria-hidden="true">&raquo;&raquo;</span>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
+    {% else %}
+        <div class="alert alert-info" role="alert">
+            No stores found. Please check back later!
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

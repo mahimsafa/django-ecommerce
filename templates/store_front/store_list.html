@@ -1,0 +1,79 @@
+{% extends 'store_front/base.html' %}
+
+{% block title %}Stores - Django Commerce{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="display-4">Our Stores</h1>
+        <p class="lead">Browse through our collection of stores</p>
+    </div>
+</div>
+
+<div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+    {% for store in stores %}
+    <div class="col">
+        <div class="card store-card h-100">
+            {% if store.logo %}
+            <img src="{{ store.logo.url }}" class="card-img-top store-logo" alt="{{ store.name }} logo">
+            {% else %}
+            <div class="text-center py-4 bg-light">
+                <i class="bi bi-shop" style="font-size: 3rem; color: #6c757d;"></i>
+            </div>
+            {% endif %}
+            <div class="card-body text-center">
+                <h5 class="card-title">{{ store.name }}</h5>
+                <p class="card-text text-muted">{{ store.tagline }}</p>
+                {% if store.description %}
+                <p class="card-text">{{ store.description|truncatewords:20 }}</p>
+                {% endif %}
+            </div>
+            <div class="card-footer bg-transparent border-top-0 text-center mb-2">
+                <a href="{% url 'store_front:store_products' store_slug=store.slug %}" class="btn btn-primary">
+                    View Products <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="alert alert-info">
+            No stores found. Please check back later.
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% if is_paginated %}
+<nav aria-label="Page navigation" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" aria-label="Previous">
+                <span aria-hidden="true">&laquo;</span>
+            </a>
+        </li>
+        {% endif %}
+        
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+            {% else %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ num }}</a>
+            </li>
+            {% endif %}
+        {% endfor %}
+        
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" aria-label="Next">
+                <span aria-hidden="true">&raquo;</span>
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+{% endblock %}

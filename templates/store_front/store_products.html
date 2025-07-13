@@ -1,0 +1,140 @@
+{% extends 'store_front/base.html' %}
+
+{% block title %}{{ store.name }} Products - Django Commerce{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1 class="display-4">{{ store.name }}</h1>
+        {% if store.tagline %}<p class="lead">{{ store.tagline }}</p>{% endif %}
+    </div>
+    <div class="col-md-4 text-md-end">
+        <a href="{% url 'store_front:store_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Stores
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Categories Sidebar -->
+    <div class="col-lg-3 mb-4">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Categories</h5>
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="?" class="list-group-item list-group-item-action {% if not request.GET.category %}active{% endif %}">
+                    All Categories
+                    <span class="badge bg-primary rounded-pill float-end">{{ products.paginator.count }}</span>
+                </a>
+                {% for cat in categories %}
+                <a href="?category={{ cat.category__slug }}" 
+                   class="list-group-item list-group-item-action {% if request.GET.category == cat.category__slug %}active{% endif %}">
+                    {{ cat.category__name }}
+                    <span class="badge bg-primary rounded-pill float-end">{{ cat.product_count }}</span>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Products -->
+    <div class="col-lg-9">
+        <!-- Search Form -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form method="get" class="row g-2">
+                    <div class="col">
+                        <input type="text" name="q" class="form-control" placeholder="Search products..." value="{{ request.GET.q }}">
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-primary">Search</button>
+                        {% if request.GET.q %}
+                        <a href="?" class="btn btn-outline-secondary">Clear</a>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Product Grid -->
+        {% if products %}
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            {% for product in products %}
+            <div class="col">
+                <div class="card product-card h-100">
+                    {% with product.images.first as image %}
+                    {% if image %}
+                    <img src="{{ image.image.url }}" class="card-img-top product-image" alt="{{ image.alt_text|default:product.name }}">
+                    {% else %}
+                    <div class="text-center py-5 bg-light">
+                        <i class="bi bi-image" style="font-size: 3rem; color: #6c757d;"></i>
+                    </div>
+                    {% endif %}
+                    {% endwith %}
+                    <div class="card-body">
+                        <h5 class="card-title">{{ product.name }}</h5>
+                        {% with product.variants.first as variant %}
+                        {% if variant %}
+                        <p class="card-text">
+                            {% if variant.is_on_sale and variant.sale_price %}
+                            <span class="text-danger fw-bold">${{ variant.sale_price }}</span>
+                            <small class="text-muted text-decoration-line-through">${{ variant.default_price }}</small>
+                            {% else %}
+                            <span class="fw-bold">${{ variant.default_price }}</span>
+                            {% endif %}
+                        </p>
+                        {% endif %}
+                        {% endwith %}
+                        <p class="card-text text-muted small">{{ product.description|truncatewords:15 }}</p>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <a href="{% url 'store_front:product_detail' slug=product.slug %}" class="btn btn-outline-primary w-100">
+                            View Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            No products found. Please try a different search or check back later.
+        </div>
+        {% endif %}
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <nav aria-label="Page navigation" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+                {% endif %}
+                
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                    {% else %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
