@@ -84,6 +84,7 @@ class Variant(models.Model):
     currency = models.CharField(default='bdt', max_length=3)
     is_on_sale = models.BooleanField(default=False)
     stock = models.IntegerField(default=0)  # NEW FIELD
+    manage_stock = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

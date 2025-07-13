@@ -106,6 +106,7 @@ def product_edit(request, product_id=None):
                 sale_price = request.POST.get(f'modal_variant_sale_price_{idx}') or None
                 stock = request.POST.get(f'modal_variant_stock_{idx}') or 0
                 is_on_sale = bool(request.POST.get(f'modal_variant_is_on_sale_{idx}'))
+                manage_stock = bool(request.POST.get(f'modal_variant_manage_stock_{idx}'))
                 Variant.objects.create(
                     product=product,
                     name=name,
@@ -114,6 +115,7 @@ def product_edit(request, product_id=None):
                     sale_price=sale_price,
                     stock=stock,
                     is_on_sale=is_on_sale,
+                    manage_stock=manage_stock,
                 )
                 created += 1
                 idx += 1
@@ -134,10 +136,15 @@ def product_edit(request, product_id=None):
                     continue
                 variant.name = request.POST.get(f'variant_name_{variant.id}', variant.name)
                 variant.sku = request.POST.get(f'variant_sku_{variant.id}', variant.sku)
-                variant.default_price = request.POST.get(f'variant_default_price_{variant.id}', variant.default_price)
-                variant.sale_price = request.POST.get(f'variant_sale_price_{variant.id}', variant.sale_price)
-                variant.stock = request.POST.get(f'variant_stock_{variant.id}', variant.stock)
+                # Handle numeric fields safely
+                default_price_val = request.POST.get(f'variant_default_price_{variant.id}')
+                variant.default_price = float(default_price_val) if default_price_val not in [None, ''] else 0
+                sale_price_val = request.POST.get(f'variant_sale_price_{variant.id}')
+                variant.sale_price = float(sale_price_val) if sale_price_val not in [None, ''] else None
+                stock_val = request.POST.get(f'variant_stock_{variant.id}')
+                variant.stock = int(stock_val) if stock_val not in [None, ''] else 0
                 variant.is_on_sale = bool(request.POST.get(f'variant_is_on_sale_{variant.id}'))
+                variant.manage_stock = bool(request.POST.get(f'variant_manage_stock_{variant.id}'))
                 variant.save()
             # Add new variant
             new_name = request.POST.get('new_variant_name')
@@ -150,6 +157,7 @@ def product_edit(request, product_id=None):
                     sale_price=request.POST.get('new_variant_sale_price') or None,
                     stock=request.POST.get('new_variant_stock') or 0,
                     is_on_sale=bool(request.POST.get('new_variant_is_on_sale')),
+                    manage_stock=bool(request.POST.get('new_variant_manage_stock')),
                 )
             return redirect('store_admin:product_edit', product.id)
         # --- IMAGE UPLOAD FORM ---
