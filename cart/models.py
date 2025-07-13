@@ -11,22 +11,42 @@ from product.models import Variant
 class CartManager(models.Manager):
     def get_or_create_cart(self, request, store):
         """Get or create a cart for the current session/user."""
+        if not request.session.session_key:
+            request.session.save()
+            
+        session_key = request.session.session_key
+        
         if request.user.is_authenticated:
-            # For authenticated users, get or create cart for the user
-            cart, created = self.get_or_create(
+            # For authenticated users, try to get their active cart first
+            cart = self.filter(
                 user=request.user,
                 store=store,
-                is_active=True,
-                session_key=None  # Clear session key if user logs in
-            )
+                is_active=True
+            ).first()
+            
+            # If no active cart, check for a session cart to merge
+            if not cart:
+                session_cart = self.filter(
+                    session_key=session_key,
+                    store=store,
+                    is_active=True
+                ).first()
+                
+                if session_cart:
+                    # Convert session cart to user cart
+                    session_cart.user = request.user
+                    session_cart.session_key = None
+                    session_cart.save()
+                    cart = session_cart
+                else:
+                    # Create new cart for the user
+                    cart = self.create(
+                        user=request.user,
+                        store=store,
+                        is_active=True
+                    )
         else:
-            # For anonymous users, use session key
-            if not request.session.session_key:
-                request.session.create()
-            
-            session_key = request.session.session_key
-            
-            # Try to get existing cart for this session
+            # For anonymous users, get or create cart with session key
             cart = self.filter(
                 session_key=session_key,
                 store=store,
@@ -34,11 +54,9 @@ class CartManager(models.Manager):
             ).first()
             
             if not cart:
-                # Create new cart for this session
                 cart = self.create(
-                    user=None,
-                    store=store,
                     session_key=session_key,
+                    store=store,
                     is_active=True
                 )
         
@@ -127,5 +145,8 @@ class CartItem(models.Model):
     def get_subtotal(self):
         """
         Returns price × quantity for this item.
+        Returns 0 if unit_price is not set.
         """
+        if self.unit_price is None or self.quantity is None:
+            return 0
         return self.unit_price * self.quantity

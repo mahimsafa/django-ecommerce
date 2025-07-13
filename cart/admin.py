@@ -1,3 +1,4 @@
+from django import forms
 from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
@@ -8,19 +9,28 @@ from .models import Cart, CartItem
 class CartItemInline(admin.TabularInline):
     model = CartItem
     extra = 0
-    readonly_fields = ('get_variant_link', 'unit_price', 'get_subtotal')
-    fields = ('get_variant_link', 'quantity', 'unit_price', 'get_subtotal')
+    readonly_fields = ('get_variant_link', 'unit_price_display', 'get_subtotal_display')
+    fields = ('get_variant_link', 'quantity', 'unit_price_display', 'get_subtotal_display')
     
     def get_variant_link(self, obj):
-        if obj.variant:
+        if obj and obj.variant:
             url = reverse('admin:product_variant_change', args=[obj.variant.id])
             return mark_safe(f'<a href="{url}">{obj.variant}</a>')
         return "-"
     get_variant_link.short_description = 'Variant'
     
-    def get_subtotal(self, obj):
-        return obj.get_subtotal()
-    get_subtotal.short_description = 'Subtotal'
+    def unit_price_display(self, obj):
+        if obj and obj.unit_price is not None:
+            return f"${obj.unit_price:.2f}"
+        return "Not set"
+    unit_price_display.short_description = 'Unit Price'
+    
+    def get_subtotal_display(self, obj):
+        if obj:
+            subtotal = obj.get_subtotal()
+            return f"${subtotal:.2f}" if subtotal is not None else "N/A"
+        return "N/A"
+    get_subtotal_display.short_description = 'Subtotal'
     
     def has_add_permission(self, request, obj=None):
         return False
@@ -59,23 +69,56 @@ class CartAdmin(admin.ModelAdmin):
     get_total.short_description = 'Total'
 
 
+class CartItemForm(forms.ModelForm):
+    class Meta:
+        model = CartItem
+        fields = '__all__'
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Make unit_price read-only if variant is set
+        if 'variant' in self.data and 'unit_price' in self.fields:
+            try:
+                variant_id = self.data.get('variant')
+                if variant_id:
+                    from product.models import Variant
+                    variant = Variant.objects.get(id=variant_id)
+                    self.fields['unit_price'].initial = variant.price
+            except (ValueError, Variant.DoesNotExist):
+                pass
+        elif self.instance and self.instance.variant_id and 'unit_price' in self.fields:
+            self.fields['unit_price'].initial = self.instance.variant.price
+
 @admin.register(CartItem)
 class CartItemAdmin(admin.ModelAdmin):
+    form = CartItemForm
     list_display = ('id', 'get_cart', 'get_variant', 'quantity', 'unit_price', 'get_subtotal')
     list_filter = ('cart__store',)
     search_fields = ('cart__id', 'variant__name', 'variant__sku')
     readonly_fields = ('added_at', 'updated_at', 'get_subtotal')
     list_select_related = ('cart', 'variant', 'cart__store')
     
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        if obj and obj.variant:
+            form.base_fields['unit_price'].help_text = f'Price from variant: {obj.variant.price}'
+        return form
+    
+    def save_model(self, request, obj, form, change):
+        # Set unit price from variant if not set
+        if obj.variant and (not obj.unit_price or not change):
+            obj.unit_price = obj.variant.price
+        super().save_model(request, obj, form, change)
+    
     def get_cart(self, obj):
-        url = reverse('admin:cart_cart_change', args=[obj.cart.id])
-        return mark_safe(f'<a href="{url}">Cart {obj.cart.id}</a>')
+        url = reverse('admin:cart_cart_change', args=[obj.cart_id])
+        return mark_safe(f'<a href="{url}">Cart #{obj.cart_id}</a>')
     get_cart.short_description = 'Cart'
     get_cart.admin_order_field = 'cart__id'
     
     def get_variant(self, obj):
         if obj.variant:
-            url = reverse('admin:product_variant_change', args=[obj.variant.id])
+            url = reverse('admin:product_variant_change', args=[obj.variant_id])
             return mark_safe(f'<a href="{url}">{obj.variant}</a>')
         return "-"
     get_variant.short_description = 'Variant'

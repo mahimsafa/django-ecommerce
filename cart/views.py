@@ -77,19 +77,43 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 @ensure_csrf_cookie
 def cart_count(request):
     try:
-        if request.user.is_authenticated:
-            count = CartItem.objects.filter(cart__user=request.user, cart__is_active=True).count()
-        else:
-            if not request.session.session_key:
-                request.session.create()  # Ensure session exists for guest users
-                count = 0
+        count = 0
+        store_id = request.session.get('current_store_id')
+        
+        if not store_id:
+            # If no store in session, try to get the first store
+            store = Store.objects.first()
+            if store:
+                store_id = store.id
+                request.session['current_store_id'] = store_id
+        
+        if store_id:
+            if request.user.is_authenticated:
+                # For authenticated users, get their active cart
+                cart = Cart.objects.filter(
+                    user=request.user,
+                    store_id=store_id,
+                    is_active=True
+                ).first()
+                if cart:
+                    count = cart.items.count()
             else:
-                count = CartItem.objects.filter(
-                    cart__session_key=request.session.session_key, 
-                    cart__is_active=True
-                ).count()
+                # For anonymous users, use session key
+                if not request.session.session_key:
+                    request.session.save()  # Ensure session exists for guest users
+                else:
+                    cart = Cart.objects.filter(
+                        session_key=request.session.session_key,
+                        store_id=store_id,
+                        is_active=True
+                    ).first()
+                    if cart:
+                        count = cart.items.count()
+        
         return JsonResponse({'count': count, 'status': 'success'})
     except Exception as e:
+        import traceback
+        print(f"Error in cart_count: {str(e)}\n{traceback.format_exc()}")
         return JsonResponse({'count': 0, 'status': 'error', 'message': str(e)})
 
 class CartView(View):

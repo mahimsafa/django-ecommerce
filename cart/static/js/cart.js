@@ -112,16 +112,57 @@ async function updateCartCount() {
         const response = await fetch('/cart/count/');
         const data = await response.json();
         
-        // Update cart count in navbar
-        const cartCountElements = document.querySelectorAll('.cart-count, .cart-count-badge');
-        cartCountElements.forEach(el => {
-            el.textContent = data.count || 0;
-            el.style.display = data.count > 0 ? 'inline-block' : 'none';
-        });
+        if (data.status === 'success') {
+            // Update cart count in navbar
+            const cartCountElements = document.querySelectorAll('.cart-count, .cart-count-badge');
+            const count = parseInt(data.count) || 0;
+            
+            cartCountElements.forEach(el => {
+                el.textContent = count;
+                el.style.display = count > 0 ? 'inline-block' : 'none';
+                
+                // Ensure the badge is visible in the DOM
+                const parent = el.closest('.position-relative');
+                if (parent) {
+                    parent.style.display = 'inline-block';
+                }
+            });
+            
+            // Update cart items count in the cart page
+            const cartItemCount = document.querySelector('.cart-item-count');
+            if (cartItemCount) {
+                cartItemCount.textContent = `${count} item${count !== 1 ? 's' : ''}`;
+            }
+            
+            return count;
+        } else {
+            console.error('Error in cart count response:', data.message || 'Unknown error');
+            return 0;
+        }
     } catch (error) {
         console.error('Error updating cart count:', error);
+        return 0;
     }
 }
+
+// Listen for authentication state changes (login/logout)
+document.addEventListener('DOMContentLoaded', function() {
+    // Update cart count when auth state might have changed
+    const authLinks = document.querySelectorAll('[href*="login"], [href*="logout"], [href*="register"]');
+    authLinks.forEach(link => {
+        link.addEventListener('click', function() {
+            // Update cart count after a short delay to allow auth state to update
+            setTimeout(updateCartCount, 1000);
+        });
+    });
+    
+    // Also update when the page becomes visible again (in case of login in another tab)
+    document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'visible') {
+            updateCartCount();
+        }
+    });
+});
 
 // Update cart item quantity
 async function updateCartItem(itemId, quantity, variantId = null) {
